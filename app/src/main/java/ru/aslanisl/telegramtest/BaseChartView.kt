@@ -51,8 +51,8 @@ open class BaseChartView
         this.startXFactor = startXFactor
         this.endXFactor = endXFactor
 
-//        if (dirty) return
-//        dirty = true
+        if (dirty) return
+        dirty = true
 
         updatePaths()
         chartDataChanges()
@@ -65,8 +65,12 @@ open class BaseChartView
         paths.clear()
         if (height == 0 || width == 0) return
         val xChart = xChart ?: return
-        var minX = xChart.values.min() ?: return
-        var maxX = xChart.values.max() ?: return
+        var minX = Long.MAX_VALUE
+        var maxX = Long.MIN_VALUE
+        xChart.values.forEach {
+            if (it < minX) minX = it
+            if (it > maxX) maxX = it
+        }
         var widthX = maxX - minX
 
         var startIndex = 0
@@ -96,8 +100,6 @@ open class BaseChartView
             chart.values.forEachIndexed { index, value ->
                 if (index in (startIndex)..(endIndex)) {
                     if (value > maxY) maxY = value
-                    // MinY always == 0
-//                    if (value < minY) minY = value
                 }
             }
         }
