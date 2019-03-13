@@ -4,7 +4,8 @@
     <color name="colorPrimaryDark">#3B5674</color>
     <color name="colorAccent">#D81B60</color>
 
-    <color name="Y_axis_line">#F1F1F2</color>
-    <color name="Y_axis_label">#8B979F</color>
+    <color name="yAxisLine">#F1F1F2</color>
+    <color name="YAxisLabel">#8B979F</color>
     <color name="greyLight">#66D4E1EB</color>
+    <color name="infoLine">#D1D1D1</color>
 </resources>

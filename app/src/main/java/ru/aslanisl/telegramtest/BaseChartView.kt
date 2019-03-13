@@ -11,6 +11,7 @@ import android.util.Log
 import android.view.View
 import kotlin.math.abs
 import kotlin.math.atan2
+import kotlin.math.log
 import kotlin.math.roundToLong
 import kotlin.math.tan
 import kotlin.system.measureNanoTime
@@ -26,8 +27,13 @@ open class BaseChartView
         minimumHeight = resources.getDimensionPixelSize(R.dimen.chart_preview_min_height)
     }
 
-    private var xChart: Chart? = null
-    private var yCharts: List<Chart> = listOf()
+    protected var xChart: Chart? = null
+    protected val xCoordinates = mutableListOf<Float>()
+    protected var yCharts: List<Chart> = listOf()
+    protected val yChartsFactored = mutableListOf<YChart>()
+    protected var factorX: Float = 0f
+    protected var fromX: Float = 0f
+    protected var factorY: Float = 0f
 
     private val paths = mutableListOf<ColorPath>()
 
@@ -70,6 +76,8 @@ open class BaseChartView
     private fun updatePaths() {
         val time = measureNanoTime {
             paths.clear()
+            xCoordinates.clear()
+            yChartsFactored.clear()
             if (height == 0 || width == 0) return
             val xChart = xChart ?: return
             var minXChart = Long.MAX_VALUE
@@ -83,7 +91,6 @@ open class BaseChartView
             var startChartIndex = 0
             var endChartIndex = xChart.values.size - 1
 
-            val fromX: Float
             val toX: Float
             if (startXFactor > -1f && endXFactor > -1f) {
                 fromX = minXChart + startXFactor * widthX
@@ -102,7 +109,7 @@ open class BaseChartView
                 toX = maxXChart.toFloat()
             }
 
-            val factorX = width.toFloat() / widthX
+            factorX = width.toFloat() / widthX
 
             val minY = 0
             var maxY = Long.MIN_VALUE
@@ -113,8 +120,14 @@ open class BaseChartView
                     }
                 }
             }
-            val factorY = height.toFloat() / (maxY - minY)
+            factorY = height.toFloat() / (maxY - minY)
             this.maxY = maxY
+
+            for (index in startChartIndex..endChartIndex) {
+                val x = xChart.values[index]
+                val factorXValue = (x - fromX) * factorX
+                xCoordinates.add(factorXValue)
+            }
 
             yCharts.forEachIndexed { chartIndex, chart ->
                 val path = Path()
@@ -131,16 +144,21 @@ open class BaseChartView
 //                    // Next Y
 //                    val y1 = chart.values[startChartIndex + 1]
 //
-//                    val yNew = y0 + (y1 - y0) * abs(fromX - x0) / abs(x1 - x0)
-//                    Log.d("TAGLOGNEW", "y0 = $y0 y1 = $y1 y = $yNew")
+//                    val deltaY = (fromX - x0) * (y1 - y0) / (x1 - x0)
+//                    val y = y0 + deltaY
+//
+//                    Log.d("TAGLOGY", "y0 = $y0 y1 = $y1 y = $y")
 //
 //                    val factorXValue = (fromX - fromX) * factorX
-//                    val factorYValue = (yNew - minY) * factorY
+//                    val factorYValue = (y - minY) * factorY
 //                    path.moveTo(factorXValue, factorYValue)
+//
+//                    if (y > maxY) maxY = y.roundToLong()
 //
 //                    lastX = factorXValue
 //                    lastY = factorYValue
 //                }
+                val yCoordinates = mutableListOf<Float>()
 
                 for (index in startChartIndex..endChartIndex) {
                     val x = xChart.values[index]
@@ -152,19 +170,28 @@ open class BaseChartView
                     if (lastX == -1f && lastY == -1f) {
                         path.moveTo(factorXValue, factorYValue)
                     } else {
-                        path.quadTo(lastX, lastY, (factorXValue + lastX) / 2, (factorYValue + lastY) / 2)
+//                        path.quadTo(lastX, lastY, (factorXValue + lastX) / 2, (factorYValue + lastY) / 2)
+                        path.lineTo(factorXValue, factorYValue)
                     }
                     lastX = factorXValue
                     lastY = factorYValue
+
+                    yCoordinates.add(factorYValue)
                 }
 
                 val color = if (chart.color == null) Color.BLACK else Color.parseColor(chart.color)
+                yChartsFactored.add(YChart(yCoordinates, color))
                 paths.add(ColorPath(path, color))
             }
         }
 
         Log.d("TAGLOGCalculate", "calculate time = $time ns")
     }
+
+    protected fun convertX(x: Float) = (x - fromX) * factorX
+    protected fun revertX(x: Float) = x / factorX + fromX
+    // Min Y always == 0
+    protected fun convertY(y: Float) = y * factorY
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
@@ -184,4 +211,5 @@ open class BaseChartView
     }
 
     protected data class ColorPath(val path: Path, val color: Int)
+    protected data class YChart(val yCoordinates: List<Float>, val color: Int)
 }
