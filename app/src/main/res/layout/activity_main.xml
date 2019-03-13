@@ -6,14 +6,28 @@
     android:orientation="vertical"
     tools:context=".MainActivity">
 
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:text="@string/followers"
+        android:textColor="#3D88CB"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
     <ru.aslanisl.telegramtest.ChartView
         android:id="@+id/chart"
         android:layout_width="match_parent"
-        android:layout_height="500dp" />
+        android:layout_height="400dp"
+        android:layout_margin="16dp" />
 
     <ru.aslanisl.telegramtest.ChartViewPreview
         android:id="@+id/chartViewPreview"
         android:layout_width="match_parent"
-        android:layout_height="80dp" />
+        android:layout_height="70dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:background="#F2F5F6" />
 
 </LinearLayout>

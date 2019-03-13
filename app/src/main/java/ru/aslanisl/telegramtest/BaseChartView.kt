@@ -7,7 +7,13 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.support.annotation.AttrRes
 import android.util.AttributeSet
+import android.util.Log
 import android.view.View
+import kotlin.math.abs
+import kotlin.math.atan2
+import kotlin.math.roundToLong
+import kotlin.math.tan
+import kotlin.system.measureNanoTime
 
 open class BaseChartView
 @JvmOverloads constructor(
@@ -62,59 +68,85 @@ open class BaseChartView
     protected open fun chartDataChanges() {}
 
     private fun updatePaths() {
-        paths.clear()
-        if (height == 0 || width == 0) return
-        val xChart = xChart ?: return
-        var minX = Long.MAX_VALUE
-        var maxX = Long.MIN_VALUE
-        xChart.values.forEach {
-            if (it < minX) minX = it
-            if (it > maxX) maxX = it
-        }
-        var widthX = maxX - minX
+        val time = measureNanoTime {
+            paths.clear()
+            if (height == 0 || width == 0) return
+            val xChart = xChart ?: return
+            var minXChart = Long.MAX_VALUE
+            var maxXChart = Long.MIN_VALUE
+            xChart.values.forEach {
+                if (it < minXChart) minXChart = it
+                if (it > maxXChart) maxXChart = it
+            }
+            var widthX = maxXChart - minXChart
 
-        var startIndex = 0
-        var endIndex = xChart.values.size - 1
-        if (startXFactor > -1f && endXFactor > -1f) {
-            val fromX = minX + startXFactor * widthX
-            val toX = minX + endXFactor * widthX
+            var startChartIndex = 0
+            var endChartIndex = xChart.values.size - 1
 
-            xChart.values.forEachIndexed { index, value ->
-                if (value > fromX && startIndex == 0) {
-                    startIndex = index
-                    minX = value
+            val fromX: Float
+            val toX: Float
+            if (startXFactor > -1f && endXFactor > -1f) {
+                fromX = minXChart + startXFactor * widthX
+                toX = minXChart + endXFactor * widthX
+                xChart.values.forEachIndexed { index, value ->
+                    if (value > fromX && startChartIndex == 0) {
+                        startChartIndex = if (index > 0) index - 1 else index
+                    }
+                    if (value > toX && endChartIndex == xChart.values.size - 1) {
+                        endChartIndex = if (index < xChart.values.size - 1) index + 1 else index
+                    }
                 }
-                if (value > toX && endIndex == xChart.values.size - 1) {
-                    endIndex = index
-                    maxX = value
+                widthX = (toX - fromX).roundToLong()
+            } else {
+                fromX = minXChart.toFloat()
+                toX = maxXChart.toFloat()
+            }
+
+            val factorX = width.toFloat() / widthX
+
+            val minY = 0
+            var maxY = Long.MIN_VALUE
+            yCharts.forEach { chart ->
+                chart.values.forEachIndexed { index, value ->
+                    if (index in startChartIndex..endChartIndex) {
+                        if (value > maxY) maxY = value
+                    }
                 }
             }
-            widthX = maxX - minX
-        }
+            val factorY = height.toFloat() / (maxY - minY)
+            this.maxY = maxY
 
-        val factorX = width.toFloat() / widthX
+            yCharts.forEachIndexed { chartIndex, chart ->
+                val path = Path()
+                var lastX = -1f
+                var lastY = -1f
 
-        val minY = 0
-        var maxY = Long.MIN_VALUE
-        yCharts.forEach { chart ->
-            chart.values.forEachIndexed { index, value ->
-                if (index in (startIndex)..(endIndex)) {
-                    if (value > maxY) maxY = value
-                }
-            }
-        }
-        val factorY = height.toFloat() / (maxY - minY)
-        this.maxY = maxY
+//                if (fromX > -1 && startChartIndex > 0 && startChartIndex < xChart.values.size - 1 && chartIndex == 0) {
+//                    // Previous X
+//                    val x0 = xChart.values[startChartIndex - 1]
+//                    // Next X
+//                    val x1 = xChart.values[startChartIndex + 1]
+//                    // Previous Y
+//                    val y0 = chart.values[startChartIndex - 1]
+//                    // Next Y
+//                    val y1 = chart.values[startChartIndex + 1]
+//
+//                    val yNew = y0 + (y1 - y0) * abs(fromX - x0) / abs(x1 - x0)
+//                    Log.d("TAGLOGNEW", "y0 = $y0 y1 = $y1 y = $yNew")
+//
+//                    val factorXValue = (fromX - fromX) * factorX
+//                    val factorYValue = (yNew - minY) * factorY
+//                    path.moveTo(factorXValue, factorYValue)
+//
+//                    lastX = factorXValue
+//                    lastY = factorYValue
+//                }
 
-        yCharts.forEachIndexed { _, chart ->
-            val path = Path()
-            var lastX = -1f
-            var lastY = -1f
-
-            chart.values.forEachIndexed { index, y ->
-                if (index in (startIndex - 1)..(endIndex + 1)) {
+                for (index in startChartIndex..endChartIndex) {
                     val x = xChart.values[index]
-                    val factorXValue = (x - minX) * factorX
+                    val y = chart.values[index]
+
+                    val factorXValue = (x - fromX) * factorX
                     val factorYValue = (y - minY) * factorY
 
                     if (lastX == -1f && lastY == -1f) {
@@ -125,10 +157,13 @@ open class BaseChartView
                     lastX = factorXValue
                     lastY = factorYValue
                 }
+
+                val color = if (chart.color == null) Color.BLACK else Color.parseColor(chart.color)
+                paths.add(ColorPath(path, color))
             }
-            val color = if (chart.color == null) Color.BLACK else Color.parseColor(chart.color)
-            paths.add(ColorPath(path, color))
         }
+
+        Log.d("TAGLOGCalculate", "calculate time = $time ns")
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {

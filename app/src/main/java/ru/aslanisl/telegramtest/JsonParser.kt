@@ -44,7 +44,7 @@ object JsonParser {
                     } else {
                         if (columnValue is Long) {
                             values.add(columnValue)
-                        } else if (columnValue is Int){
+                        } else if (columnValue is Int) {
                             values.add(columnValue.toLong())
                         }
                     }

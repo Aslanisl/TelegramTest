@@ -6,9 +6,12 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import android.support.annotation.AttrRes
+import android.support.v4.content.ContextCompat
 import android.util.AttributeSet
+import android.util.Log
 import android.view.MotionEvent
 import ru.aslanisl.telegramtest.ChartViewPreview.ResizeCorner.*
+import kotlin.system.measureNanoTime
 
 private const val AREA_WIDTH_DEFAULT = 300f
 private const val AREA_RESIZE_WIDTH = 50f
@@ -24,9 +27,13 @@ class ChartViewPreview
     private var listener: PreviewAreaChangeListener? = null
     private val selectAreaRectF = RectF()
     private val selectAreaPaintStroke = Paint().apply {
-        color = Color.LTGRAY
+        color = ContextCompat.getColor(context, R.color.greyLight)
         strokeWidth = 8f
         style = Paint.Style.STROKE
+    }
+    private val selectAreaPaintBackground = Paint().apply {
+        color = Color.WHITE
+        style = Paint.Style.FILL
     }
 
     fun setPreviewAreaChangeListener(listener: PreviewAreaChangeListener) {
@@ -40,6 +47,7 @@ class ChartViewPreview
 
     private fun updateSelectAreaRectF() {
         selectAreaRectF.set(0f, 0f, AREA_WIDTH_DEFAULT, height.toFloat())
+        calculatePreviewAreaFactors()
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -52,6 +60,7 @@ class ChartViewPreview
                 setSelectAreaPosition(x)
             }
         }
+        Log.d("TAGLOGTouch", "time = ${System.currentTimeMillis()}")
         return true
     }
 
@@ -96,9 +105,13 @@ class ChartViewPreview
     }
 
     override fun onDraw(canvas: Canvas) {
-        super.onDraw(canvas)
+        val time= measureNanoTime {
+            canvas.drawRect(selectAreaRectF, selectAreaPaintBackground)
+            super.onDraw(canvas)
+            canvas.drawRect(selectAreaRectF, selectAreaPaintStroke)
+        }
 
-        canvas.drawRect(selectAreaRectF, selectAreaPaintStroke)
+        Log.d("TAGLOGDrawPreview", "draw time = $time ns")
     }
 
     private fun calculatePreviewAreaFactors() {
