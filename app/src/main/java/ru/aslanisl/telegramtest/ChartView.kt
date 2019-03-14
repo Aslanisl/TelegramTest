@@ -3,12 +3,15 @@ package ru.aslanisl.telegramtest
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.RectF
 import android.support.annotation.AttrRes
 import android.support.v4.content.ContextCompat
 import android.util.AttributeSet
 import android.util.Log
 import android.view.MotionEvent
-import kotlin.math.abs
+import java.util.Date
+import kotlin.math.roundToInt
+import kotlin.math.roundToLong
 import kotlin.system.measureNanoTime
 
 private const val AXIS_Y_LABEL_STEP = 50
@@ -22,11 +25,10 @@ class ChartView
 
     private var lineStep = 0f
     private var lineCount = 0
-    private val lineWidth = resources.getDimensionPixelSize(R.dimen.Y_axis_width)
-    private val textMargin = resources.getDimensionPixelSize(R.dimen.spacing_small).toFloat()
     private var oldMaxY = 0L
 
     private val infoLineWidthHalf = resources.getDimensionPixelSize(R.dimen.info_line_width) / 2
+    private val infoBarMargin = resources.getDimensionPixelSize(R.dimen.info_bar_margin)
 
     private var showInfo = false
     private var touchX: Float = 0f
@@ -49,6 +51,17 @@ class ChartView
         style = Paint.Style.FILL
         color = ContextCompat.getColor(context, R.color.YAxisLabel)
         textSize = resources.getDimensionPixelSize(R.dimen.Y_axis_label).toFloat()
+    }
+
+    private val infoBar = InfoBar()
+
+    init {
+        infoBar.initResources(context)
+    }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        infoBar.setMaxWidth(w.toFloat(), false)
     }
 
     override fun chartDataChanges() {
@@ -76,14 +89,14 @@ class ChartView
 
     override fun onDraw(canvas: Canvas) {
         val time = measureNanoTime {
-            for (i in 0 until lineCount) {
-                val y = height - lineStep * i * AXIS_Y_LABEL_STEP
-                canvas.drawRect(0f, y, width.toFloat(), y - lineWidth, linePaint)
-
-                // Just add margin 5
-                val textY = y - lineWidth - textMargin
-                canvas.drawText((i * AXIS_Y_LABEL_STEP).toString(), textMargin, textY, textPaint)
-            }
+//            for (i in 0 until lineCount) {
+//                val y = height - lineStep * i * AXIS_Y_LABEL_STEP
+//                canvas.drawRect(0f, y, width.toFloat(), y - lineWidth, linePaint)
+//
+//                // Just add margin 5
+//                val textY = y - lineWidth - textMargin
+//                canvas.drawText((i * AXIS_Y_LABEL_STEP).toString(), textMargin, textY, textPaint)
+//            }
 
             super.onDraw(canvas)
             drawInfo(canvas)
@@ -91,13 +104,15 @@ class ChartView
         Log.d("TAGLOGDrawChart", "draw time = $time ns")
     }
 
+    private var previousValueX = 0f
+
     private fun drawInfo(canvas: Canvas) {
         if (showInfo.not()) return
         val closeValueX = nearestNumberBinarySearch(xCoordinates, touchX)
         val closeValueIndex = xCoordinates.indexOf(closeValueX)
         canvas.drawRect(
             closeValueX - infoLineWidthHalf,
-            0f,
+            infoBarMargin.toFloat(),
             closeValueX + infoLineWidthHalf,
             height.toFloat(),
             infoLinePaint
@@ -110,6 +125,30 @@ class ChartView
                 infoPointColor.apply { color = it.color }
             )
         }
+        drawInfoBar(canvas, closeValueX, closeValueIndex)
+    }
+
+    private fun drawInfoBar(canvas: Canvas, closeValueX: Float, closeValueIndex: Int) {
+        val xValue = revertX(closeValueX).roundToLong()
+        val yValues = yChartsFactored.map { revertY(it.yCoordinates[closeValueIndex]) }
+
+        if (previousValueX != closeValueX) {
+            infoBar.setX(closeValueX)
+            infoBar.setDate(Date().apply { time = xValue }, false)
+
+            val yValuesText = mutableListOf<String>()
+            val yTitlesText = mutableListOf<String>()
+            val yColorsText = mutableListOf<Int>()
+
+            yChartsFactored.forEach {
+                yValuesText.add(revertY(it.yCoordinates[closeValueIndex]).roundToInt().toString())
+                yTitlesText.add(it.title)
+                yColorsText.add(it.color)
+            }
+
+            infoBar.setValueTitles(yValuesText, yTitlesText, yColorsText)
+        }
+        infoBar.draw(canvas)
     }
 
     private fun nearestNumberBinarySearch(
@@ -131,4 +170,6 @@ class ChartView
         else
             nearestNumberBinarySearch(numbers, myNumber, mid, end)
     }
+
+    private data class MeasureText(val bounds: RectF = RectF(), var text: String = "")
 }

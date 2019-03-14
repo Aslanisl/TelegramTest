@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Paint.*
 import android.graphics.Path
 import android.support.annotation.AttrRes
 import android.util.AttributeSet
@@ -46,8 +47,9 @@ open class BaseChartView
 
     private var linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         strokeWidth = resources.getDimensionPixelSize(R.dimen.chart_preview_stroke_width).toFloat()
-        color = Color.BLACK
         style = Paint.Style.STROKE
+        strokeCap = Cap.SQUARE
+        strokeJoin = Join.ROUND
     }
 
     fun loadChartData(chartData: ChartData) {
@@ -97,10 +99,10 @@ open class BaseChartView
                 toX = minXChart + endXFactor * widthX
                 xChart.values.forEachIndexed { index, value ->
                     if (value > fromX && startChartIndex == 0) {
-                        startChartIndex = if (index > 0) index - 1 else index
+                        startChartIndex = if (index > 0) index + 1 else index
                     }
                     if (value > toX && endChartIndex == xChart.values.size - 1) {
-                        endChartIndex = if (index < xChart.values.size - 1) index + 1 else index
+                        endChartIndex = if (index < xChart.values.size - 1) index - 1 else index
                     }
                 }
                 widthX = (toX - fromX).roundToLong()
@@ -144,12 +146,12 @@ open class BaseChartView
 //                    // Next Y
 //                    val y1 = chart.values[startChartIndex + 1]
 //
-//                    val deltaY = (fromX - x0) * (y1 - y0) / (x1 - x0)
-//                    val y = y0 + deltaY
+//                    val deltaY = abs(fromX - x0) * (y1 - y0) / (x1 - x0)
+//                    val y = y0 - deltaY
 //
 //                    Log.d("TAGLOGY", "y0 = $y0 y1 = $y1 y = $y")
 //
-//                    val factorXValue = (fromX - fromX) * factorX
+//                    val factorXValue = 0f
 //                    val factorYValue = (y - minY) * factorY
 //                    path.moveTo(factorXValue, factorYValue)
 //
@@ -180,7 +182,7 @@ open class BaseChartView
                 }
 
                 val color = if (chart.color == null) Color.BLACK else Color.parseColor(chart.color)
-                yChartsFactored.add(YChart(yCoordinates, color))
+                yChartsFactored.add(YChart(yCoordinates, chart.title, color))
                 paths.add(ColorPath(path, color))
             }
         }
@@ -188,10 +190,9 @@ open class BaseChartView
         Log.d("TAGLOGCalculate", "calculate time = $time ns")
     }
 
-    protected fun convertX(x: Float) = (x - fromX) * factorX
-    protected fun revertX(x: Float) = x / factorX + fromX
     // Min Y always == 0
-    protected fun convertY(y: Float) = y * factorY
+    protected fun revertY(y: Float) = y / factorY
+    protected fun revertX(x: Float) = x / factorX + fromX
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
@@ -211,5 +212,5 @@ open class BaseChartView
     }
 
     protected data class ColorPath(val path: Path, val color: Int)
-    protected data class YChart(val yCoordinates: List<Float>, val color: Int)
+    protected data class YChart(val yCoordinates: List<Float>, val title: String, val color: Int)
 }

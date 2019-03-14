@@ -8,4 +8,10 @@
     <dimen name="Y_axis_width">1dp</dimen>
     <dimen name="Y_axis_label">18sp</dimen>
     <dimen name="info_line_width">1dp</dimen>
+
+    <dimen name="info_bar_small_margin">2dp</dimen>
+    <dimen name="info_bar_margin">8dp</dimen>
+
+    <dimen name="font_big">16sp</dimen>
+    <dimen name="font_normal">14sp</dimen>
 </resources>
