@@ -3,7 +3,6 @@ package ru.aslanisl.telegramtest
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
-import android.graphics.RectF
 import android.support.annotation.AttrRes
 import android.support.v4.content.ContextCompat
 import android.util.AttributeSet
@@ -15,6 +14,8 @@ import kotlin.math.roundToLong
 import kotlin.system.measureNanoTime
 
 private const val AXIS_Y_LABEL_STEP = 50
+private const val AXIS_Y_COUNT = 6
+private const val AXIS_Y_STEP = 5
 
 class ChartView
 @JvmOverloads constructor(
@@ -24,7 +25,9 @@ class ChartView
 ) : BaseChartView(context, attrs, defStyleAttr) {
 
     private var lineStep = 0f
-    private var lineCount = 0
+    private var lineCount = 0f
+    private val lineWidth = resources.getDimensionPixelSize(R.dimen.Y_axis_width)
+    private val textMargin = resources.getDimensionPixelSize(R.dimen.spacing_small).toFloat()
     private var oldMaxY = 0L
 
     private val infoLineWidthHalf = resources.getDimensionPixelSize(R.dimen.info_line_width) / 2
@@ -68,8 +71,8 @@ class ChartView
         if (height == 0) return
         if (oldMaxY == maxY) return
         oldMaxY = maxY
-        lineStep = height.toFloat() / maxY
-        lineCount = Math.round(maxY.toDouble() / AXIS_Y_LABEL_STEP).toInt()
+        lineStep = height.toFloat() / AXIS_Y_COUNT
+        lineCount = maxY.toFloat() / AXIS_Y_COUNT
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -89,16 +92,19 @@ class ChartView
 
     override fun onDraw(canvas: Canvas) {
         val time = measureNanoTime {
-//            for (i in 0 until lineCount) {
-//                val y = height - lineStep * i * AXIS_Y_LABEL_STEP
-//                canvas.drawRect(0f, y, width.toFloat(), y - lineWidth, linePaint)
-//
-//                // Just add margin 5
-//                val textY = y - lineWidth - textMargin
-//                canvas.drawText((i * AXIS_Y_LABEL_STEP).toString(), textMargin, textY, textPaint)
-//            }
-
+            for (i in 0 until AXIS_Y_COUNT) {
+                val y = height - lineStep * i
+                canvas.drawRect(0f, y, width.toFloat(), y - lineWidth, linePaint)
+            }
             super.onDraw(canvas)
+            for (i in 0 until AXIS_Y_COUNT) {
+                val y = height - lineStep * i
+
+                val textY = y - lineWidth - textMargin
+                val text = (lineCount * i).roundToInt().toString()
+                canvas.drawText(text, textMargin, textY, textPaint)
+            }
+
             drawInfo(canvas)
         }
         Log.d("TAGLOGDrawChart", "draw time = $time ns")
@@ -130,7 +136,6 @@ class ChartView
 
     private fun drawInfoBar(canvas: Canvas, closeValueX: Float, closeValueIndex: Int) {
         val xValue = revertX(closeValueX).roundToLong()
-        val yValues = yChartsFactored.map { revertY(it.yCoordinates[closeValueIndex]) }
 
         if (previousValueX != closeValueX) {
             infoBar.setX(closeValueX)
@@ -170,6 +175,4 @@ class ChartView
         else
             nearestNumberBinarySearch(numbers, myNumber, mid, end)
     }
-
-    private data class MeasureText(val bounds: RectF = RectF(), var text: String = "")
 }
