@@ -5,9 +5,13 @@
 
     <dimen name="spacing_small">6dp</dimen>
 
+    <dimen name="X_axis_margin">16dp</dimen>
+
     <dimen name="Y_axis_width">1dp</dimen>
     <dimen name="Y_axis_label">16sp</dimen>
     <dimen name="info_line_width">1dp</dimen>
+
+    <dimen name="info_point_stoke_width">3dp</dimen>
 
     <dimen name="info_bar_small_margin">2dp</dimen>
     <dimen name="info_bar_margin">8dp</dimen>

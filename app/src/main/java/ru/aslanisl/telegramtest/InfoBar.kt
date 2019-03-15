@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.RectF
+import android.graphics.Typeface
 import android.support.v4.content.ContextCompat
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -14,7 +15,6 @@ import kotlin.math.max
 
 class InfoBar {
 
-    private val calculateBounds = Rect()
     private val infoBarBounds = RectF()
 
     private var barHeight = 0f
@@ -29,16 +29,19 @@ class InfoBar {
     private var dateTextHeight = 0f
     private val datePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.BLACK
+        typeface = Typeface.DEFAULT_BOLD
     }
 
     private var valueTextHeight = 0f
     private val valuePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.GREEN
+        typeface = Typeface.DEFAULT_BOLD
     }
 
     private var titleTextHeight = 0f
     private val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.GREEN
+        typeface = Typeface.DEFAULT_BOLD
     }
 
     private val barPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -100,10 +103,10 @@ class InfoBar {
     fun setX(x: Float) {
         val infoBarXStart = x - barWidth / 2
         val infoBarXEnd = x + barWidth / 2
-        var barXStart = if (infoBarXStart < 0) 0f else infoBarXStart
-        var barXEnd = if (infoBarXEnd > maxWidth) maxWidth else infoBarXEnd
-        if (barXStart <= 0f) barXEnd = barWidth
-        if (barXEnd >= maxWidth) barXStart = maxWidth - barWidth
+        var barXStart = if (infoBarXStart < 0 + contentPadding) 0f + contentPadding else infoBarXStart
+        var barXEnd = if (infoBarXEnd > maxWidth - contentPadding) maxWidth - contentPadding else infoBarXEnd
+        if (barXStart <= 0f + contentPadding) barXEnd = barWidth + contentPadding
+        if (barXEnd >= maxWidth - contentPadding) barXStart = maxWidth - barWidth - contentPadding
 
         infoBarBounds.set(barXStart, contentPadding, barXEnd, contentPadding + barHeight)
     }
@@ -126,17 +129,17 @@ class InfoBar {
         // Add padding from top
         barHeight += contentPadding
 
-        val dateHeight = getTextHeight(datePaint)
+        val dateHeight = datePaint.getTextHeight()
         barHeight += dateHeight
         dateTextHeight = dateHeight
 
         barHeight += contentPadding
 
-        val valueHeight = getTextHeight(valuePaint)
+        val valueHeight = valuePaint.getTextHeight()
         barHeight += valueHeight
         valueTextHeight = valueHeight
 
-        val titleHeight = getTextHeight(titlePaint)
+        val titleHeight = titlePaint.getTextHeight()
         barHeight += titleHeight
         titleTextHeight = titleHeight
 
@@ -150,14 +153,14 @@ class InfoBar {
         // Add padding from left
         barWidth += contentPadding
 
-        val dateTextWidth = getTextWidth(datePaint, dateTextField.text)
+        val dateTextWidth = datePaint.measureText(dateTextField.text)
 
         var valuesTextWidth = 0f
         var titlesTextWidth = 0f
 
         valueTitles.forEach {
-            valuesTextWidth += getTextWidth(valuePaint, it.value)
-            titlesTextWidth += getTextWidth(titlePaint, it.title)
+            valuesTextWidth += valuePaint.measureText(it.value)
+            titlesTextWidth += titlePaint.measureText(it.title)
         }
         // Add padding's
         valuesTextWidth += valueTitles.lastIndex * contentPadding
@@ -198,8 +201,8 @@ class InfoBar {
             valueTextField.x = valueTitleWidth
             titleTextField.x = valueTitleWidth
 
-            val valueWidth = getTextWidth(valuePaint, valueTitle.value)
-            val titleWidth = getTextWidth(titlePaint, valueTitle.title)
+            val valueWidth = valuePaint.measureText(valueTitle.value)
+            val titleWidth = titlePaint.measureText(valueTitle.title)
 
             valueTitleWidth += max(valueWidth, titleWidth)
             valueTitleWidth += contentPadding
@@ -208,13 +211,6 @@ class InfoBar {
             textFields.add(titleTextField)
         }
     }
-
-    private fun getTextHeight(paint: Paint): Float {
-        val fm = paint.fontMetrics
-        return fm.descent - fm.ascent
-    }
-
-    private fun getTextWidth(paint: Paint, text: String) = paint.measureText(text)
 
     private data class TextField(var text: String, var x: Float, var y: Float, var paint: Paint)
     private data class ValueTitle(var value: String, var title: String, var color: Int)

@@ -10,12 +10,11 @@ import android.support.annotation.AttrRes
 import android.util.AttributeSet
 import android.util.Log
 import android.view.View
-import kotlin.math.abs
-import kotlin.math.atan2
-import kotlin.math.log
 import kotlin.math.roundToLong
-import kotlin.math.tan
 import kotlin.system.measureNanoTime
+
+private const val Y_TOP_VALUE_MARGIN = 20
+private const val AXIS_X_HEIGHT = 250
 
 open class BaseChartView
 @JvmOverloads constructor(
@@ -36,14 +35,36 @@ open class BaseChartView
     protected var fromX: Float = 0f
     protected var factorY: Float = 0f
 
+    protected var enableYMaxAdding = true
+        set(value) {
+            field = value
+            updatePaths()
+            invalidate()
+        }
+    protected var enableXAxis = true
+        set(value) {
+            field = value
+            updatePaths()
+            invalidate()
+        }
+
     private val paths = mutableListOf<ColorPath>()
 
     private var startXFactor: Float = -1f
     private var endXFactor: Float = -1f
+    protected var startXChartIndex: Int = 0
+    protected var endXChartIndex: Int = 0
 
     private var dirty = false
 
     protected var maxY = 0L
+
+    protected var axisXHeight = AXIS_X_HEIGHT
+        set(value) {
+            field = value
+            updatePaths()
+            invalidate()
+        }
 
     private var linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         strokeWidth = resources.getDimensionPixelSize(R.dimen.chart_preview_stroke_width).toFloat()
@@ -80,7 +101,7 @@ open class BaseChartView
             paths.clear()
             xCoordinates.clear()
             yChartsFactored.clear()
-            if (height == 0 || width == 0) return
+            if (chartHeight <= 0 || width == 0) return
             val xChart = xChart ?: return
             var minXChart = Long.MAX_VALUE
             var maxXChart = Long.MIN_VALUE
@@ -90,19 +111,19 @@ open class BaseChartView
             }
             var widthX = maxXChart - minXChart
 
-            var startChartIndex = 0
-            var endChartIndex = xChart.values.size - 1
+            startXChartIndex = 0
+            endXChartIndex = xChart.values.size - 1
 
             val toX: Float
             if (startXFactor > -1f && endXFactor > -1f) {
                 fromX = minXChart + startXFactor * widthX
                 toX = minXChart + endXFactor * widthX
                 xChart.values.forEachIndexed { index, value ->
-                    if (value > fromX && startChartIndex == 0) {
-                        startChartIndex = if (index > 0) index + 1 else index
+                    if (value > fromX && startXChartIndex == 0) {
+                        startXChartIndex = if (index > 0) index + 1 else index
                     }
-                    if (value > toX && endChartIndex == xChart.values.size - 1) {
-                        endChartIndex = if (index < xChart.values.size - 1) index - 1 else index
+                    if (value > toX && endXChartIndex == xChart.values.size - 1) {
+                        endXChartIndex = if (index < xChart.values.size - 1) index - 1 else index
                     }
                 }
                 widthX = (toX - fromX).roundToLong()
@@ -117,15 +138,16 @@ open class BaseChartView
             var maxY = Long.MIN_VALUE
             yCharts.forEach { chart ->
                 chart.values.forEachIndexed { index, value ->
-                    if (index in startChartIndex..endChartIndex) {
+                    if (index in startXChartIndex..endXChartIndex) {
                         if (value > maxY) maxY = value
                     }
                 }
             }
-            factorY = height.toFloat() / (maxY - minY)
+            if (enableYMaxAdding) maxY += Y_TOP_VALUE_MARGIN
+            factorY = chartHeight.toFloat() / (maxY - minY)
             this.maxY = maxY
 
-            for (index in startChartIndex..endChartIndex) {
+            for (index in startXChartIndex..endXChartIndex) {
                 val x = xChart.values[index]
                 val factorXValue = (x - fromX) * factorX
                 xCoordinates.add(factorXValue)
@@ -136,15 +158,15 @@ open class BaseChartView
                 var lastX = -1f
                 var lastY = -1f
 
-//                if (fromX > -1 && startChartIndex > 0 && startChartIndex < xChart.values.size - 1 && chartIndex == 0) {
+//                if (fromX > -1 && startXChartIndex > 0 && startXChartIndex < xChart.values.size - 1 && chartIndex == 0) {
 //                    // Previous X
-//                    val x0 = xChart.values[startChartIndex - 1]
+//                    val x0 = xChart.values[startXChartIndex - 1]
 //                    // Next X
-//                    val x1 = xChart.values[startChartIndex + 1]
+//                    val x1 = xChart.values[startXChartIndex + 1]
 //                    // Previous Y
-//                    val y0 = chart.values[startChartIndex - 1]
+//                    val y0 = chart.values[startXChartIndex - 1]
 //                    // Next Y
-//                    val y1 = chart.values[startChartIndex + 1]
+//                    val y1 = chart.values[startXChartIndex + 1]
 //
 //                    val deltaY = abs(fromX - x0) * (y1 - y0) / (x1 - x0)
 //                    val y = y0 - deltaY
@@ -162,7 +184,7 @@ open class BaseChartView
 //                }
                 val yCoordinates = mutableListOf<Float>()
 
-                for (index in startChartIndex..endChartIndex) {
+                for (index in startXChartIndex..endXChartIndex) {
                     val x = xChart.values[index]
                     val y = chart.values[index]
 
@@ -170,10 +192,9 @@ open class BaseChartView
                     val factorYValue = (y - minY) * factorY
 
                     if (lastX == -1f && lastY == -1f) {
-                        path.moveTo(factorXValue, factorYValue)
+                        path.moveTo(factorXValue, if (enableXAxis) factorYValue + axisXHeight else factorYValue)
                     } else {
-//                        path.quadTo(lastX, lastY, (factorXValue + lastX) / 2, (factorYValue + lastY) / 2)
-                        path.lineTo(factorXValue, factorYValue)
+                        path.lineTo(factorXValue, if (enableXAxis) factorYValue + axisXHeight else factorYValue)
                     }
                     lastX = factorXValue
                     lastY = factorYValue
@@ -208,8 +229,20 @@ open class BaseChartView
         }
         canvas.restore()
 
+        if (enableXAxis) {
+            canvas.save()
+            canvas.translate(0f, chartHeight.toFloat())
+            drawXAxis(canvas)
+            canvas.restore()
+        }
+
         dirty = false
     }
+
+    open fun drawXAxis(canvas: Canvas) {}
+
+    protected val chartHeight: Int
+        get() = if (enableXAxis) height - axisXHeight else height
 
     protected data class ColorPath(val path: Path, val color: Int)
     protected data class YChart(val yCoordinates: List<Float>, val title: String, val color: Int)

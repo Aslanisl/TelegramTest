@@ -36,6 +36,11 @@ class ChartViewPreview
         style = Paint.Style.FILL
     }
 
+    init {
+        enableYMaxAdding = false
+        enableXAxis = false
+    }
+
     fun setPreviewAreaChangeListener(listener: PreviewAreaChangeListener) {
         this.listener = listener
     }
