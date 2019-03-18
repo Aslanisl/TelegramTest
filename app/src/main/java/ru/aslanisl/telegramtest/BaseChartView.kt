@@ -28,7 +28,7 @@ open class BaseChartView
     }
 
     protected var xChart: Chart? = null
-    protected val xCoordinates = mutableListOf<Float>()
+    protected val xCoordinatesFactored = mutableListOf<Float>()
     protected var yCharts: List<Chart> = listOf()
     protected val yChartsFactored = mutableListOf<YChart>()
     protected var factorX: Float = 0f
@@ -90,16 +90,17 @@ open class BaseChartView
         dirty = true
 
         updatePaths()
-        chartDataChanges()
+        chartDataFactorsChanges()
         invalidate()
     }
 
     protected open fun chartDataChanges() {}
+    protected open fun chartDataFactorsChanges() {}
 
     private fun updatePaths() {
         val time = measureNanoTime {
             paths.clear()
-            xCoordinates.clear()
+            xCoordinatesFactored.clear()
             yChartsFactored.clear()
             if (chartHeight <= 0 || width == 0) return
             val xChart = xChart ?: return
@@ -150,7 +151,7 @@ open class BaseChartView
             for (index in startXChartIndex..endXChartIndex) {
                 val x = xChart.values[index]
                 val factorXValue = (x - fromX) * factorX
-                xCoordinates.add(factorXValue)
+                xCoordinatesFactored.add(factorXValue)
             }
 
             yCharts.forEachIndexed { chartIndex, chart ->

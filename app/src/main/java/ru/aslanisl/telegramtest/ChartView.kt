@@ -77,17 +77,31 @@ class ChartView
     }
 
     private val infoBar = InfoBar()
+    private val xAxis = XAxis()
 
     init {
         infoBar.initResources(context)
+        xAxis.initResources(context)
+
+        axisXHeight = xAxis.findMaxHeight().roundToInt()
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         infoBar.setMaxWidth(w.toFloat(), false)
+        xAxis.setMaxWidth(w)
     }
 
     override fun chartDataChanges() {
+        xAxis.setXLabels(xChart)
+        updateYAxis()
+    }
+
+    override fun chartDataFactorsChanges() {
+        updateYAxis()
+    }
+
+    private fun updateYAxis() {
         if (chartHeight <= 0) return
         if (oldMaxY == maxY) return
         oldMaxY = maxY
@@ -131,68 +145,14 @@ class ChartView
         Log.d("TAGLOGDrawChart", "draw time = $time ns")
     }
 
-
-    private val xDate = Date()
-    private val texts = mutableListOf<String>()
     override fun drawXAxis(canvas: Canvas) {
-        val xChart = xChart ?: return
-        texts.clear()
-        for (i in startXChartIndex..endXChartIndex) {
-            val value = xChart.values[i]
-            val text = xAxisDateFormat.format(xDate.apply { time = value })
-            texts.add(text)
-        }
-        val ratioXAxis = calculateRatioXAxis(texts)
-        xCoordinates.forEachIndexed { index, x ->
-            if ((index + startXChartIndex).rem(ratioXAxis) == 0) {
-                val text = texts[index]
-                canvas.drawText(text, x, 50f, xAxisTextPaint)
-            }
-        }
-    }
-
-    private fun calculateRatioXAxis(items: List<String>): Int {
-        val maxWidth = width
-        var width = 0f
-        var index = 0
-        for (i in 0..items.lastIndex) {
-            val text = items[i]
-            width += xAxisTextPaint.measureText(text)
-            width += xAxisMargin
-
-            if (width >= maxWidth) {
-                index = i + 1
-                break
-            }
-        }
-        val ratio = if (index == 0) return items.size else Math.round(items.size.toFloat() / index)
-        Log.d("TAGLOGRatio", "Ratio $ratio")
-        return checkWidth(items, ratio)
-    }
-
-    private fun checkWidth(items: List<String>, ration: Int): Int {
-        if (ration == 0) return 1
-        val maxWidth = width
-        var width = 0f
-        for (i in 0..items.lastIndex) {
-            if ((i + startXChartIndex).rem(ration) == 0) {
-                val text = texts[i]
-
-                width += xAxisTextPaint.measureText(text)
-                width += xAxisMargin
-
-                if (width >= maxWidth) {
-                    return checkWidth(items, ration + 1)
-                }
-            }
-        }
-        return ration
+        xAxis.drawFromToIndex(canvas, startXChartIndex, endXChartIndex, xCoordinatesFactored)
     }
 
     private fun drawInfo(canvas: Canvas) {
         if (showInfo.not()) return
-        val closeValueX = xCoordinates.nearestNumberBinarySearch(touchX)
-        val closeValueIndex = xCoordinates.indexOf(closeValueX)
+        val closeValueX = xCoordinatesFactored.nearestNumberBinarySearch(touchX)
+        val closeValueIndex = xCoordinatesFactored.indexOf(closeValueX)
         canvas.drawRect(
             closeValueX - infoLineWidthHalf,
             infoBarMargin.toFloat(),
