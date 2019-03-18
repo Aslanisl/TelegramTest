@@ -103,10 +103,10 @@ class InfoBar {
     fun setX(x: Float) {
         val infoBarXStart = x - barWidth / 2
         val infoBarXEnd = x + barWidth / 2
-        var barXStart = if (infoBarXStart < 0 + contentPadding) 0f + contentPadding else infoBarXStart
-        var barXEnd = if (infoBarXEnd > maxWidth - contentPadding) maxWidth - contentPadding else infoBarXEnd
-        if (barXStart <= 0f + contentPadding) barXEnd = barWidth + contentPadding
-        if (barXEnd >= maxWidth - contentPadding) barXStart = maxWidth - barWidth - contentPadding
+        var barXStart = if (infoBarXStart < 0) 0f else infoBarXStart
+        var barXEnd = if (infoBarXEnd > maxWidth) maxWidth else infoBarXEnd
+        if (barXStart <= 0f) barXEnd = barWidth
+        if (barXEnd >= maxWidth) barXStart = maxWidth - barWidth
 
         infoBarBounds.set(barXStart, contentPadding, barXEnd, contentPadding + barHeight)
     }

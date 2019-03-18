@@ -40,9 +40,6 @@ class ChartView
     private var touchX: Float = 0f
     private var previousValueX = 0f
 
-    private val xAxisDateFormat = SimpleDateFormat("MMM d", Locale.getDefault())
-    private val xAxisMargin = resources.getDimensionPixelSize(R.dimen.X_axis_margin)
-
     private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
         color = ContextCompat.getColor(context, R.color.yAxisLine)

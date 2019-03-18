@@ -5,5 +5,6 @@ data class Chart (
     val values: List<Long>,
     val type: String,
     val name: String?,
-    val color: String?
+    val color: String?,
+    var enable: Boolean = true
 )

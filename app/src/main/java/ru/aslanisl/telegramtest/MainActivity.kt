@@ -1,11 +1,23 @@
 package ru.aslanisl.telegramtest
 
+import android.content.res.ColorStateList
+import android.graphics.Color
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
+import android.support.v4.content.ContextCompat
+import android.view.View
+import android.view.ViewGroup
+import android.widget.CheckBox
+import android.widget.LinearLayout
 import kotlinx.android.synthetic.main.activity_main.*
 import ru.aslanisl.telegramtest.ChartViewPreview.*
 
 class MainActivity : AppCompatActivity() {
+
+    private lateinit var charts: ChartData
+    private val spacingSmall by lazy { resources.getDimensionPixelSize(R.dimen.spacing_small) }
+    private val dividerSpacing by lazy { resources.getDimensionPixelSize(R.dimen.spacing_big) }
+    private val dividerHeight by lazy { resources.getDimensionPixelSize(R.dimen.divider_height) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -15,12 +27,67 @@ class MainActivity : AppCompatActivity() {
 
         val chartData = JsonParser.parseJson(this)
 
-        chartViewPreview.loadChartData(chartData[0])
-        chart.loadChartData(chartData[0])
-        chartViewPreview.setPreviewAreaChangeListener(object : PreviewAreaChangeListener{
+        charts = chartData[4]
+        loadChartData()
+        chartViewPreview.setPreviewAreaChangeListener(object : PreviewAreaChangeListener {
             override fun changeFactors(startXFactor: Float, endXFactor: Float) {
                 chart.updateDrawFactors(startXFactor, endXFactor)
             }
         })
+
+        val checkBoxes = charts.getYChars().map { getCheckBox(it) }
+        checkBoxes.forEachIndexed { index, checkBox ->
+            chartChecks.addView(checkBox)
+            if (index != checkBoxes.lastIndex) {
+                chartChecks.addView(getLineDivider())
+            }
+        }
+    }
+
+    private fun loadChartData() {
+        chartViewPreview.loadChartData(charts)
+        chart.loadChartData(charts)
+    }
+
+    private fun getCheckBox(chart: Chart): CheckBox {
+        return CheckBox(this).apply {
+            text = chart.name
+            val color = if (chart.color.isNullOrEmpty().not()) Color.parseColor(chart.color) else Color.BLUE
+            buttonTintList = ColorStateList.valueOf(color)
+            isChecked = chart.enable
+
+            setOnCheckedChangeListener { _, isChecked ->
+                if (isChecked.not() && charts.getYChars().count { it.enable } <= 1) {
+                    setChecked(true)
+                    return@setOnCheckedChangeListener
+                }
+
+                chart.enable = isChecked
+                loadChartData()
+            }
+
+            layoutParams = getLayoutParamsCheckBox()
+        }
+    }
+
+    private fun getLayoutParamsCheckBox(): ViewGroup.LayoutParams {
+        return LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        ).apply {
+            setMargins(0, spacingSmall, 0, spacingSmall)
+        }
+    }
+
+    private fun getLineDivider(): View {
+        return View(this).apply {
+            setBackgroundColor(ContextCompat.getColor(this@MainActivity, R.color.yAxisLine))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dividerHeight
+            ).apply {
+                setMargins(dividerSpacing, 0, dividerSpacing, 0)
+            }
+        }
     }
 }

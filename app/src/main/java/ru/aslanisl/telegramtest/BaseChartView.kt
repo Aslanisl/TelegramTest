@@ -1,5 +1,6 @@
 package ru.aslanisl.telegramtest
 
+import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
@@ -10,11 +11,13 @@ import android.support.annotation.AttrRes
 import android.util.AttributeSet
 import android.util.Log
 import android.view.View
+import kotlin.math.roundToInt
 import kotlin.math.roundToLong
-import kotlin.system.measureNanoTime
 
 private const val Y_TOP_VALUE_MARGIN = 20
 private const val AXIS_X_HEIGHT = 250
+
+private const val Y_AXIS_ANIM_DURATION = 300L
 
 open class BaseChartView
 @JvmOverloads constructor(
@@ -57,10 +60,17 @@ open class BaseChartView
 
     private var dirty = false
 
+    private var minXChart = Long.MAX_VALUE
+    private var maxXChart = Long.MIN_VALUE
+
     protected var maxY = 0L
+    protected var minY = 0L
+
+    protected val yAxisAnimator = ValueAnimator()
 
     protected var axisXHeight = AXIS_X_HEIGHT
         set(value) {
+            yAxisAnimator.setIntValues()
             field = value
             updatePaths()
             invalidate()
@@ -73,9 +83,16 @@ open class BaseChartView
         strokeJoin = Join.ROUND
     }
 
+    init {
+        initMaxYAnimator()
+    }
+
     fun loadChartData(chartData: ChartData) {
         xChart = chartData.getXChart()
         yCharts = chartData.getYChars()
+
+        updateMinMaxXChart()
+        updateMaxYAnimation()
 
         updatePaths()
         chartDataChanges()
@@ -89,127 +106,134 @@ open class BaseChartView
         if (dirty) return
         dirty = true
 
+        updateMaxYAnimation()
+
         updatePaths()
         chartDataFactorsChanges()
         invalidate()
+    }
+
+    private fun updateMinMaxXChart() {
+        val xChart = xChart ?: return
+        xChart.values.forEach {
+            if (it < minXChart) minXChart = it
+            if (it > maxXChart) maxXChart = it
+        }
     }
 
     protected open fun chartDataChanges() {}
     protected open fun chartDataFactorsChanges() {}
 
     private fun updatePaths() {
-        val time = measureNanoTime {
-            paths.clear()
-            xCoordinatesFactored.clear()
-            yChartsFactored.clear()
-            if (chartHeight <= 0 || width == 0) return
-            val xChart = xChart ?: return
-            var minXChart = Long.MAX_VALUE
-            var maxXChart = Long.MIN_VALUE
-            xChart.values.forEach {
-                if (it < minXChart) minXChart = it
-                if (it > maxXChart) maxXChart = it
-            }
-            var widthX = maxXChart - minXChart
+        paths.clear()
+        xCoordinatesFactored.clear()
+        yChartsFactored.clear()
+        if (chartHeight <= 0 || width == 0) return
+        val xChart = xChart ?: return
 
-            startXChartIndex = 0
-            endXChartIndex = xChart.values.size - 1
+        updateChartIndexesFactorX()
 
-            val toX: Float
-            if (startXFactor > -1f && endXFactor > -1f) {
-                fromX = minXChart + startXFactor * widthX
-                toX = minXChart + endXFactor * widthX
-                xChart.values.forEachIndexed { index, value ->
-                    if (value > fromX && startXChartIndex == 0) {
-                        startXChartIndex = if (index > 0) index + 1 else index
-                    }
-                    if (value > toX && endXChartIndex == xChart.values.size - 1) {
-                        endXChartIndex = if (index < xChart.values.size - 1) index - 1 else index
-                    }
-                }
-                widthX = (toX - fromX).roundToLong()
-            } else {
-                fromX = minXChart.toFloat()
-                toX = maxXChart.toFloat()
-            }
+        for (index in startXChartIndex..endXChartIndex) {
+            val x = xChart.values[index]
+            val factorXValue = (x - fromX) * factorX
+            xCoordinatesFactored.add(factorXValue)
+        }
 
-            factorX = width.toFloat() / widthX
-
-            val minY = 0
-            var maxY = Long.MIN_VALUE
-            yCharts.forEach { chart ->
-                chart.values.forEachIndexed { index, value ->
-                    if (index in startXChartIndex..endXChartIndex) {
-                        if (value > maxY) maxY = value
-                    }
-                }
-            }
-            if (enableYMaxAdding) maxY += Y_TOP_VALUE_MARGIN
-            factorY = chartHeight.toFloat() / (maxY - minY)
-            this.maxY = maxY
+        yCharts.forEachIndexed { chartIndex, chart ->
+            val path = Path()
+            var lastX = -1f
+            var lastY = -1f
+            val yCoordinates = mutableListOf<Float>()
 
             for (index in startXChartIndex..endXChartIndex) {
                 val x = xChart.values[index]
+                val y = chart.values[index]
+
                 val factorXValue = (x - fromX) * factorX
-                xCoordinatesFactored.add(factorXValue)
-            }
+                val factorYValue = (y - minY) * factorY
 
-            yCharts.forEachIndexed { chartIndex, chart ->
-                val path = Path()
-                var lastX = -1f
-                var lastY = -1f
-
-//                if (fromX > -1 && startXChartIndex > 0 && startXChartIndex < xChart.values.size - 1 && chartIndex == 0) {
-//                    // Previous X
-//                    val x0 = xChart.values[startXChartIndex - 1]
-//                    // Next X
-//                    val x1 = xChart.values[startXChartIndex + 1]
-//                    // Previous Y
-//                    val y0 = chart.values[startXChartIndex - 1]
-//                    // Next Y
-//                    val y1 = chart.values[startXChartIndex + 1]
-//
-//                    val deltaY = abs(fromX - x0) * (y1 - y0) / (x1 - x0)
-//                    val y = y0 - deltaY
-//
-//                    Log.d("TAGLOGY", "y0 = $y0 y1 = $y1 y = $y")
-//
-//                    val factorXValue = 0f
-//                    val factorYValue = (y - minY) * factorY
-//                    path.moveTo(factorXValue, factorYValue)
-//
-//                    if (y > maxY) maxY = y.roundToLong()
-//
-//                    lastX = factorXValue
-//                    lastY = factorYValue
-//                }
-                val yCoordinates = mutableListOf<Float>()
-
-                for (index in startXChartIndex..endXChartIndex) {
-                    val x = xChart.values[index]
-                    val y = chart.values[index]
-
-                    val factorXValue = (x - fromX) * factorX
-                    val factorYValue = (y - minY) * factorY
-
-                    if (lastX == -1f && lastY == -1f) {
-                        path.moveTo(factorXValue, if (enableXAxis) factorYValue + axisXHeight else factorYValue)
-                    } else {
-                        path.lineTo(factorXValue, if (enableXAxis) factorYValue + axisXHeight else factorYValue)
-                    }
-                    lastX = factorXValue
-                    lastY = factorYValue
-
-                    yCoordinates.add(factorYValue)
+                if (lastX == -1f && lastY == -1f) {
+                    path.moveTo(factorXValue, if (enableXAxis) factorYValue + axisXHeight else factorYValue)
+                } else {
+                    path.lineTo(factorXValue, if (enableXAxis) factorYValue + axisXHeight else factorYValue)
                 }
+                lastX = factorXValue
+                lastY = factorYValue
 
-                val color = if (chart.color == null) Color.BLACK else Color.parseColor(chart.color)
-                yChartsFactored.add(YChart(yCoordinates, chart.title, color))
-                paths.add(ColorPath(path, color))
+                yCoordinates.add(factorYValue)
             }
+
+            val color = if (chart.color == null) Color.BLACK else Color.parseColor(chart.color)
+            yChartsFactored.add(YChart(yCoordinates, chart.title, color))
+            paths.add(ColorPath(path, color))
+        }
+    }
+
+    private fun updateChartIndexesFactorX() {
+        val xChart = xChart ?: return
+        var widthX = maxXChart - minXChart
+
+        startXChartIndex = 0
+        endXChartIndex = xChart.values.size - 1
+
+        if (startXFactor > -1f && endXFactor > -1f) {
+            fromX = minXChart + startXFactor * widthX
+            val toX = minXChart + endXFactor * widthX
+            xChart.values.forEachIndexed { index, value ->
+                if (value > fromX && startXChartIndex == 0) {
+                    startXChartIndex = if (index > 0) index + 1 else index
+                }
+                if (value > toX && endXChartIndex == xChart.values.size - 1) {
+                    endXChartIndex = if (index < xChart.values.size - 1) index - 1 else index
+                }
+            }
+            widthX = (toX - fromX).roundToLong()
+        } else {
+            fromX = minXChart.toFloat()
         }
 
-        Log.d("TAGLOGCalculate", "calculate time = $time ns")
+        factorX = width.toFloat() / widthX
+    }
+
+    private fun getMaxYFromChart(): Long {
+        var maxY = Long.MIN_VALUE
+        yCharts.forEach { chart ->
+            chart.values.forEachIndexed { index, value ->
+                if (index in startXChartIndex..endXChartIndex) {
+                    if (value > maxY) maxY = value
+                }
+            }
+        }
+        if (enableYMaxAdding) maxY += Y_TOP_VALUE_MARGIN
+        return maxY
+    }
+
+    private fun updateMaxYFactorY(toMaxY: Long) {
+        this.maxY = toMaxY
+        factorY = chartHeight.toFloat() / (maxY - minY)
+        Log.d("TAGLOGFactorY", "FactorY = $factorY")
+    }
+
+    private fun initMaxYAnimator() {
+        yAxisAnimator.addUpdateListener {
+            val maxY = (it.animatedValue as? Int)?.toLong() ?: return@addUpdateListener
+            updateMaxYFactorY(maxY)
+            updatePaths()
+            invalidate()
+        }
+        yAxisAnimator.duration = Y_AXIS_ANIM_DURATION
+    }
+
+    private fun updateMaxYAnimation() {
+        yAxisAnimator.cancel()
+        val fromY = yAxisAnimator.animatedValue as? Int ?: 0
+        val maxYChart = getMaxYFromChart()
+        updateMaxYFactorY(maxYChart)
+        val toY = ((maxYChart - minY) * factorY).roundToInt()
+        Log.d("TAGLOGAnimator", "FromY $fromY ToY $toY")
+        if (fromY == toY) return
+        yAxisAnimator.setIntValues(fromY, toY)
+        yAxisAnimator.start()
     }
 
     // Min Y always == 0
@@ -218,6 +242,10 @@ open class BaseChartView
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
+
+        updateMinMaxXChart()
+        updateMaxYAnimation()
+
         updatePaths()
     }
 
