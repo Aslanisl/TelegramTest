@@ -27,7 +27,7 @@ class MainActivity : AppCompatActivity() {
 
         val chartData = JsonParser.parseJson(this)
 
-        charts = chartData[4]
+        charts = chartData[0]
         loadChartData()
         chartViewPreview.setPreviewAreaChangeListener(object : PreviewAreaChangeListener {
             override fun changeFactors(startXFactor: Float, endXFactor: Float) {

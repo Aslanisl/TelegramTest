@@ -39,6 +39,7 @@ class ChartViewPreview
     init {
         enableYMaxAdding = false
         enableXAxis = false
+        enableAnimation = false
     }
 
     fun setPreviewAreaChangeListener(listener: PreviewAreaChangeListener) {

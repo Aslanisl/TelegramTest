@@ -80,6 +80,8 @@ class ChartView
         xAxis.initResources(context)
 
         axisXHeight = xAxis.findMaxHeight().roundToInt()
+
+        enableAnimation = true
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {

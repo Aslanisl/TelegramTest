@@ -70,7 +70,7 @@ class XAxis {
         if (lastStartXIndex != startXIndex || lastEndXIndex != endXIndex) {
             findRemRatio(startXIndex, endXIndex)
         }
-
+        // TODO check index of bound
         for (i in startXIndex..endXIndex) {
             if (i.rem(remRatio) == 0) {
                 val text = texts[i]
