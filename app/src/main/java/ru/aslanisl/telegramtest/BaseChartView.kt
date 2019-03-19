@@ -7,17 +7,20 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Paint.*
 import android.graphics.Path
+import android.os.Handler
+import android.os.HandlerThread
 import android.support.annotation.AttrRes
 import android.util.AttributeSet
 import android.util.Log
 import android.view.View
+import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 
 private const val Y_TOP_VALUE_MARGIN = 20
 private const val AXIS_X_HEIGHT = 250
 
-private const val Y_AXIS_ANIM_DURATION = 300L
+private const val Y_AXIS_ANIM_DURATION = 3L
 
 open class BaseChartView
 @JvmOverloads constructor(
@@ -54,7 +57,9 @@ open class BaseChartView
     private val paths = mutableListOf<ColorPath>()
 
     private var startXFactor: Float = -1f
+    private var oldStartXFactor: Float = -1f
     private var endXFactor: Float = -1f
+    private var oldEndXFactor: Float = -1f
     protected var startXChartIndex: Int = 0
     protected var endXChartIndex: Int = 0
 
@@ -67,6 +72,9 @@ open class BaseChartView
     protected var minY = 0L
 
     protected val yAxisAnimator = ValueAnimator()
+    protected var yAxisAnimatorSpeed = 0f
+
+    private var updateChartThread: UpdateChartThread? = null
 
     protected var axisXHeight = AXIS_X_HEIGHT
         set(value) {
@@ -91,12 +99,11 @@ open class BaseChartView
         xChart = chartData.getXChart()
         yCharts = chartData.getYChars()
 
+        updateAnimatorSpeed()
         updateMinMaxXChart()
-        updateMaxYAnimation()
-
-        updatePaths()
+        updateChartIndexesFactorX()
+        update()
         chartDataChanges()
-        invalidate()
     }
 
     fun updateDrawFactors(startXFactor: Float, endXFactor: Float) {
@@ -106,11 +113,8 @@ open class BaseChartView
         if (dirty) return
         dirty = true
 
-        updateMaxYAnimation()
-
-        updatePaths()
-        chartDataFactorsChanges()
-        invalidate()
+        updateChartIndexesFactorX()
+        update()
     }
 
     private fun updateMinMaxXChart() {
@@ -130,8 +134,6 @@ open class BaseChartView
         yChartsFactored.clear()
         if (chartHeight <= 0 || width == 0) return
         val xChart = xChart ?: return
-
-        updateChartIndexesFactorX()
 
         for (index in startXChartIndex..endXChartIndex) {
             val x = xChart.values[index]
@@ -211,7 +213,6 @@ open class BaseChartView
     private fun updateMaxYFactorY(toMaxY: Long) {
         this.maxY = toMaxY
         factorY = chartHeight.toFloat() / (maxY - minY)
-        Log.d("TAGLOGFactorY", "FactorY = $factorY")
     }
 
     private fun initMaxYAnimator() {
@@ -219,21 +220,36 @@ open class BaseChartView
             val maxY = (it.animatedValue as? Int)?.toLong() ?: return@addUpdateListener
             updateMaxYFactorY(maxY)
             updatePaths()
+            chartDataFactorsChanges()
             invalidate()
         }
         yAxisAnimator.duration = Y_AXIS_ANIM_DURATION
     }
 
+    private fun update(animation: Boolean = true) {
+        if (animation) {
+            updateMaxYAnimation()
+        } else {
+            val maxYChart = getMaxYFromChart()
+            updateMaxYFactorY(maxYChart)
+            updatePaths()
+            chartDataFactorsChanges()
+            invalidate()
+        }
+    }
+
     private fun updateMaxYAnimation() {
-        yAxisAnimator.cancel()
         val fromY = yAxisAnimator.animatedValue as? Int ?: 0
+        val maxYChart = getMaxYFromChart().toInt()
+        Log.d("TAGLOGAnimator", "FromY $fromY ToY $maxYChart")
+        val duration = (abs(fromY - maxYChart) * yAxisAnimatorSpeed).roundToLong()
+        yAxisAnimator.duration = if (duration > 0) duration else 1
+        yAxisAnimator.setIntValues(fromY, maxYChart)
+    }
+
+    private fun updateAnimatorSpeed() {
         val maxYChart = getMaxYFromChart()
-        updateMaxYFactorY(maxYChart)
-        val toY = ((maxYChart - minY) * factorY).roundToInt()
-        Log.d("TAGLOGAnimator", "FromY $fromY ToY $toY")
-        if (fromY == toY) return
-        yAxisAnimator.setIntValues(fromY, toY)
-        yAxisAnimator.start()
+        yAxisAnimatorSpeed = (chartHeight.toFloat() / maxYChart) * Y_AXIS_ANIM_DURATION
     }
 
     // Min Y always == 0
@@ -242,11 +258,9 @@ open class BaseChartView
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-
-        updateMinMaxXChart()
-        updateMaxYAnimation()
-
-        updatePaths()
+        updateChartIndexesFactorX()
+        updateAnimatorSpeed()
+        update(false)
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -275,4 +289,34 @@ open class BaseChartView
 
     protected data class ColorPath(val path: Path, val color: Int)
     protected data class YChart(val yCoordinates: List<Float>, val title: String, val color: Int)
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        updateChartThread = UpdateChartThread()
+    }
+
+    override fun onDetachedFromWindow() {
+        updateChartThread?.quit()
+        super.onDetachedFromWindow()
+    }
+
+    inner class UpdateChartThread: HandlerThread("ChartThread") {
+        val handler by lazy { Handler(looper) }
+        var toMaxY: Long = 0L
+        private var currentMaxY: Long = 0L
+
+        init {
+            start()
+        }
+
+        private fun looping() {
+            while (true) {
+
+                updateMaxYFactorY(maxY)
+                updatePaths()
+                chartDataFactorsChanges()
+                invalidate()
+            }
+        }
+    }
 }

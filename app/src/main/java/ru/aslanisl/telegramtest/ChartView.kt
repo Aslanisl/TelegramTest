@@ -31,7 +31,6 @@ class ChartView
     private val lineWidth = resources.getDimensionPixelSize(R.dimen.Y_axis_width)
     private val textMargin = resources.getDimensionPixelSize(R.dimen.spacing_small).toFloat()
     private val infoPointStrokeWidth = resources.getDimensionPixelSize(R.dimen.info_point_stoke_width).toFloat()
-    private var oldMaxY = 0L
 
     private val infoLineWidthHalf = resources.getDimensionPixelSize(R.dimen.info_line_width) / 2
     private val infoBarMargin = resources.getDimensionPixelSize(R.dimen.info_bar_margin)
@@ -100,8 +99,6 @@ class ChartView
 
     private fun updateYAxis() {
         if (chartHeight <= 0) return
-        if (oldMaxY == maxY) return
-        oldMaxY = maxY
         lineStep = chartHeight.toFloat() / AXIS_Y_COUNT
         lineCount = maxY.toFloat() / AXIS_Y_COUNT
     }
