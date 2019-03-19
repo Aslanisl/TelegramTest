@@ -89,14 +89,16 @@ open class BaseChartView
         strokeJoin = Join.ROUND
     }
 
-    fun loadChartData(chartData: ChartData) {
+    fun loadChartData(chartData: ChartData, animate: Boolean = true) {
         xChart = chartData.getXChart()
         yCharts = chartData.getYChars()
 
-        updateChartIndexesFactorX()
-        setAnimationStep()
         updateMinMaxXChart()
-        update()
+        updateChartIndexesFactorX(true)
+        updateChartThread?.reset()
+
+        setAnimationStep()
+        update(animate)
         chartDataChanges()
     }
 
@@ -112,6 +114,8 @@ open class BaseChartView
 
     private fun updateMinMaxXChart() {
         val xChart = xChart ?: return
+        minXChart = Long.MAX_VALUE
+        maxXChart = Long.MIN_VALUE
         xChart.values.forEach {
             if (it < minXChart) minXChart = it
             if (it > maxXChart) maxXChart = it
@@ -317,6 +321,10 @@ open class BaseChartView
 
         init {
             start()
+        }
+
+        fun reset() {
+            currentMaxY = 0L
         }
 
         fun setStep(step: Long) {

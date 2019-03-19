@@ -5,6 +5,8 @@ import android.graphics.Color
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.support.v4.content.ContextCompat
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.CheckBox
@@ -19,16 +21,18 @@ class MainActivity : AppCompatActivity() {
     private val dividerSpacing by lazy { resources.getDimensionPixelSize(R.dimen.spacing_big) }
     private val dividerHeight by lazy { resources.getDimensionPixelSize(R.dimen.divider_height) }
 
+    private lateinit var chartData: List<ChartData>
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         title = getString(R.string.statistics)
 
-        val chartData = JsonParser.parseJson(this)
+        chartData = JsonParser.parseJson(this)
 
-        charts = chartData[0]
-        loadChartData()
+        charts = chartData[4]
+        loadChartData(true)
         chartViewPreview.setPreviewAreaChangeListener(object : PreviewAreaChangeListener {
             override fun changeFactors(startXFactor: Float, endXFactor: Float) {
                 chart.updateDrawFactors(startXFactor, endXFactor)
@@ -44,9 +48,31 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun loadChartData() {
-        chartViewPreview.loadChartData(charts)
-        chart.loadChartData(charts)
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        chartData.forEachIndexed { index, chartData ->
+            menu.add(Menu.NONE, index, Menu.NONE, "Chart ${index + 1}")
+        }
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        charts = chartData[item.itemId]
+        loadChartData(false)
+        return true
+    }
+
+    private fun loadChartData(animate: Boolean) {
+        chartViewPreview.loadChartData(charts, animate)
+        chart.loadChartData(charts, animate)
+
+        chartChecks.removeAllViews()
+        val checkBoxes = charts.getYChars().map { getCheckBox(it) }
+        checkBoxes.forEachIndexed { index, checkBox ->
+            chartChecks.addView(checkBox)
+            if (index != checkBoxes.lastIndex) {
+                chartChecks.addView(getLineDivider())
+            }
+        }
     }
 
     private fun getCheckBox(chart: Chart): CheckBox {
@@ -63,7 +89,7 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 chart.enable = isChecked
-                loadChartData()
+                loadChartData(true)
             }
 
             layoutParams = getLayoutParamsCheckBox()
