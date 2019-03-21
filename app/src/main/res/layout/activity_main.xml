@@ -18,7 +18,7 @@
         android:textStyle="bold" />
 
     <ru.aslanisl.telegramtest.ChartView
-        android:id="@+id/chart"
+        android:id="@+id/chartView"
         android:layout_width="match_parent"
         android:layout_height="300dp"
         android:layout_margin="@dimen/spacing_normal" />

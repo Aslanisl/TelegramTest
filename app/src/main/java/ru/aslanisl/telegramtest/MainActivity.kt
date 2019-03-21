@@ -5,8 +5,6 @@ import android.graphics.Color
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.support.v4.content.ContextCompat
-import android.view.Menu
-import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.CheckBox
@@ -31,11 +29,11 @@ class MainActivity : AppCompatActivity() {
 
         chartData = JsonParser.parseJson(this)
 
-        charts = chartData[4]
+        charts = chartData[0]
         loadChartData(true)
         chartViewPreview.setPreviewAreaChangeListener(object : PreviewAreaChangeListener {
             override fun changeFactors(startXFactor: Float, endXFactor: Float) {
-                chart.updateDrawFactors(startXFactor, endXFactor)
+                chartView.updateDrawFactors(startXFactor, endXFactor)
             }
         })
     }
@@ -55,10 +53,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun loadChartData(animate: Boolean) {
         chartViewPreview.loadChartData(charts, animate)
-        chart.loadChartData(charts, animate)
+        chartView.loadChartData(charts, animate)
 
         chartChecks.removeAllViews()
-        val checkBoxes = charts.getYChars(false).map { getCheckBox(it) }
+        val checkBoxes = charts.getYChars().map { getCheckBox(it) }
         checkBoxes.forEachIndexed { index, checkBox ->
             chartChecks.addView(checkBox)
             if (index != checkBoxes.lastIndex) {
@@ -75,13 +73,14 @@ class MainActivity : AppCompatActivity() {
             isChecked = chart.enable
 
             setOnCheckedChangeListener { _, isChecked ->
-                if (isChecked.not() && charts.getYChars(false).count { it.enable } <= 1) {
+                if (isChecked.not() && charts.getYChars().count { it.enable } <= 1) {
                     setChecked(true)
                     return@setOnCheckedChangeListener
                 }
 
                 chart.enable = isChecked
-                loadChartData(true)
+//                chartView.update()
+//                chartViewPreview.update()
             }
 
             layoutParams = getLayoutParamsCheckBox()

@@ -9,14 +9,17 @@ import android.graphics.Path
 import android.os.Handler
 import android.os.Looper
 import android.support.annotation.AttrRes
+import android.support.v4.graphics.ColorUtils
 import android.util.AttributeSet
 import android.util.Log
 import android.view.View
 import kotlin.math.abs
+import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 
-private const val Y_TOP_VALUE_MARGIN = 20
 private const val AXIS_X_HEIGHT = 250
+
+private const val ANIMATION_STEP_FACTOR = 7
 
 open class BaseChartView
 @JvmOverloads constructor(
@@ -42,14 +45,12 @@ open class BaseChartView
     protected var enableYMaxAdding = true
         set(value) {
             field = value
-            updatePaths()
-            invalidate()
+            update(false)
         }
     protected var enableXAxis = true
         set(value) {
             field = value
-            updatePaths()
-            invalidate()
+            update(false)
         }
 
     protected val chartHeight: Int
@@ -70,6 +71,7 @@ open class BaseChartView
     private var maxXChart = Long.MIN_VALUE
 
     protected var maxY = 0L
+    protected var yTopValueMargin = 20
     protected var minY = 0L
 
     private var updateChartThread: UpdateChartThread? = null
@@ -77,8 +79,7 @@ open class BaseChartView
     protected var axisXHeight = AXIS_X_HEIGHT
         set(value) {
             field = value
-            updatePaths()
-            invalidate()
+            update(false)
         }
 
     private var linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -90,11 +91,12 @@ open class BaseChartView
 
     fun loadChartData(chartData: ChartData, animate: Boolean = true) {
         xChart = chartData.getXChart()
-        yCharts = chartData.getYChars(true)
+        yCharts = chartData.getYChars()
+
+        calculateYMarginTop()
 
         updateMinMaxXChart()
         updateChartIndexesFactorX(true)
-        updateChartThread?.reset()
 
         setAnimationStep()
         update(animate)
@@ -137,7 +139,10 @@ open class BaseChartView
             xCoordinatesFactored.add(factorXValue)
         }
 
-        yCharts.forEachIndexed { chartIndex, chart ->
+        for (chart in yCharts) {
+            val alphaDraw = chart.alpha
+            if (alphaDraw <= 0f) continue
+
             val path = Path()
             var lastX = -1f
             var lastY = -1f
@@ -161,7 +166,11 @@ open class BaseChartView
                 yCoordinates.add(factorYValue)
             }
 
-            val color = if (chart.color == null) Color.BLACK else Color.parseColor(chart.color)
+            var color = if (chart.color == null) Color.BLACK else Color.parseColor(chart.color)
+            if (alphaDraw < 1) {
+                val alphaRange = (255 * alphaDraw).roundToInt()
+                color = ColorUtils.setAlphaComponent(color, alphaRange)
+            }
             yChartsFactored.add(YChart(yCoordinates, chart.title, color))
             paths.add(ColorPath(path, color))
         }
@@ -196,25 +205,35 @@ open class BaseChartView
         oldEndXFactor = endXFactor
     }
 
-    private fun getMaxYFromChart(allChart: Boolean = false): Long {
+    private fun calculateYMarginTop() {
+        val maxY = getMaxYFromChart(true)
+        // Add 5% for top margin
+        yTopValueMargin = (maxY * 0.05).roundToInt()
+    }
+
+    private fun getMaxYFromChart(allChart: Boolean = false, checkEnable: Boolean = true): Long {
         var maxY = Long.MIN_VALUE
         yCharts.forEach { chart ->
-            chart.values.forEachIndexed { index, value ->
-                if (index in startXChartIndex..endXChartIndex || allChart) {
-                    if (value > maxY) maxY = value
+            if (chart.enable && checkEnable) {
+                chart.values.forEachIndexed { index, value ->
+                    if (index in startXChartIndex..endXChartIndex || allChart) {
+                        if (value > maxY) maxY = value
+                    }
                 }
             }
         }
-        if (enableYMaxAdding) maxY += Y_TOP_VALUE_MARGIN
+        if (enableYMaxAdding) maxY += yTopValueMargin
         return maxY
     }
 
-    private fun getMinYFromChart(allChart: Boolean = false): Long {
+    private fun getMinYFromChart(allChart: Boolean = false, checkEnable: Boolean = true): Long {
         var minY = Long.MAX_VALUE
         yCharts.forEach { chart ->
-            chart.values.forEachIndexed { index, value ->
-                if (index in startXChartIndex..endXChartIndex || allChart) {
-                    if (value < minY) minY = value
+            if (chart.enable && checkEnable) {
+                chart.values.forEachIndexed { index, value ->
+                    if (index in startXChartIndex..endXChartIndex || allChart) {
+                        if (value < minY) minY = value
+                    }
                 }
             }
         }
@@ -223,21 +242,30 @@ open class BaseChartView
 
     private fun updateMaxYFactorY(toMaxY: Long) {
         this.maxY = toMaxY
-        if (enableYMaxAdding) maxY += Y_TOP_VALUE_MARGIN
+        if (enableYMaxAdding) maxY += yTopValueMargin
         factorY = chartHeight.toFloat() / (maxY - minY)
     }
 
     private fun initAnimator() {
         updateChartThread = UpdateChartThread()
-        updateChartThread?.callback = {
-            val newMaxY = if (enableYMaxAdding) it + Y_TOP_VALUE_MARGIN else it
-            val notChange = newMaxY == maxY && startXFactor == oldStartXFactor && endXFactor == oldEndXFactor
-            if (notChange.not()) updateForYMax(it)
+        updateChartThread?.callback = { newMax ->
+            updateAnimation()
+            if (isNeedToUpdate(newMax)) updateForYMax(newMax)
         }
         setAnimationStep()
     }
 
-    private fun update(animation: Boolean = true) {
+    private fun isNeedToUpdate(newMax: Long) : Boolean {
+        val newMaxY = if (enableYMaxAdding) newMax + yTopValueMargin else newMax
+        val isNeedToRedraw = yCharts.any { it.isNeedToRedraw() }
+        val notChange = newMaxY == maxY
+            && startXFactor == oldStartXFactor
+            && endXFactor == oldEndXFactor
+            && yCharts.any { isNeedToRedraw.not() }
+        return notChange.not()
+    }
+
+    fun update(animation: Boolean = true) {
         if (animation && enableAnimation) {
             updateAnimation()
         } else {
@@ -255,10 +283,10 @@ open class BaseChartView
 
     private fun setAnimationStep() {
         if (chartHeight <= 0) return
-        val maxY = getMaxYFromChart(true)
-        val minY = getMinYFromChart(true)
+        val maxY = getMaxYFromChart(allChart = true, checkEnable = false)
+        val minY = getMinYFromChart(allChart = true, checkEnable = false)
         val dif = abs(maxY - minY)
-        val step = (dif.toFloat() / chartHeight) * (chartHeight / 30)
+        val step = (dif.toFloat() / chartHeight) * (chartHeight / ANIMATION_STEP_FACTOR)
         updateChartThread?.setStep(step.roundToLong())
     }
 
@@ -268,6 +296,7 @@ open class BaseChartView
 
     // Min Y always == 0
     protected fun revertY(y: Float) = y / factorY
+
     protected fun revertX(x: Float) = x / factorX + fromX
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
@@ -321,7 +350,7 @@ open class BaseChartView
 
         private var isRunning = true
 
-        private val delay = 16L
+        private val delay = 8L
 
         init {
             isRunning = true

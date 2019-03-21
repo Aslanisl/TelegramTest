@@ -39,7 +39,7 @@ class ChartViewPreview
     init {
         enableYMaxAdding = false
         enableXAxis = false
-        enableAnimation = false
+        enableAnimation = true
     }
 
     fun setPreviewAreaChangeListener(listener: PreviewAreaChangeListener) {
@@ -52,7 +52,7 @@ class ChartViewPreview
     }
 
     private fun updateSelectAreaRectF() {
-        selectAreaRectF.set(0f, 0f, AREA_WIDTH_DEFAULT, height.toFloat())
+        selectAreaRectF.set(0f, 0f, AREA_WIDTH_DEFAULT, chartHeight.toFloat())
         calculatePreviewAreaFactors()
     }
 
