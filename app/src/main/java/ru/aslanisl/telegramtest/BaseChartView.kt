@@ -7,7 +7,6 @@ import android.graphics.Paint
 import android.graphics.Paint.*
 import android.graphics.Path
 import android.os.Handler
-import android.os.HandlerThread
 import android.os.Looper
 import android.support.annotation.AttrRes
 import android.util.AttributeSet
@@ -91,7 +90,7 @@ open class BaseChartView
 
     fun loadChartData(chartData: ChartData, animate: Boolean = true) {
         xChart = chartData.getXChart()
-        yCharts = chartData.getYChars()
+        yCharts = chartData.getYChars(true)
 
         updateMinMaxXChart()
         updateChartIndexesFactorX(true)
@@ -230,7 +229,11 @@ open class BaseChartView
 
     private fun initAnimator() {
         updateChartThread = UpdateChartThread()
-        updateChartThread?.callback = { updateForYMax(it) }
+        updateChartThread?.callback = {
+            val newMaxY = if (enableYMaxAdding) it + Y_TOP_VALUE_MARGIN else it
+            val notChange = newMaxY == maxY && startXFactor == oldStartXFactor && endXFactor == oldEndXFactor
+            if (notChange.not()) updateForYMax(it)
+        }
         setAnimationStep()
     }
 
@@ -297,29 +300,31 @@ open class BaseChartView
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
+        Log.d("TAGLogWindow", "onAttachedToWindow")
         if (enableAnimation) initAnimator()
     }
 
     override fun onDetachedFromWindow() {
-        updateChartThread?.quit()
+        updateChartThread?.exit()
+        Log.d("TAGLogWindow", "onDetachedFromWindow")
         super.onDetachedFromWindow()
     }
 
-    private class UpdateChartThread : HandlerThread("ChartThread") {
+    private class UpdateChartThread : Thread("ChartThread") {
         private val mainThreadHandler by lazy { Handler(Looper.getMainLooper()) }
         private var toMaxY: Long = 0L
         private var currentMaxY: Long = 0L
         private var step: Long = 0
         private var stepInternal: Long = 0
 
-        private var startXFactor: Float = -1f
-        private var endXFactor: Float = -1f
-
         var callback: ((Long) -> Unit)? = null
+
+        private var isRunning = true
 
         private val delay = 16L
 
         init {
+            isRunning = true
             start()
         }
 
@@ -337,12 +342,12 @@ open class BaseChartView
             if (toMaxY >= currentMaxY) stepInternal = step
         }
 
-        fun setNewFactors() {
-
+        fun exit() {
+            isRunning = false
         }
 
         override fun run() {
-            while (true) {
+            while (isRunning) {
                 try {
                     currentMaxY += stepInternal
                     if (currentMaxY > toMaxY && stepInternal > 0) currentMaxY = toMaxY
@@ -351,6 +356,7 @@ open class BaseChartView
                         callback?.invoke(currentMaxY)
                     }
                     Thread.sleep(delay)
+                    Log.d("TAGLOGThread", "Working")
                 } catch (e: InterruptedException) {
                     e.printStackTrace()
                 }

@@ -38,35 +38,27 @@ class MainActivity : AppCompatActivity() {
                 chart.updateDrawFactors(startXFactor, endXFactor)
             }
         })
-
-        val checkBoxes = charts.getYChars().map { getCheckBox(it) }
-        checkBoxes.forEachIndexed { index, checkBox ->
-            chartChecks.addView(checkBox)
-            if (index != checkBoxes.lastIndex) {
-                chartChecks.addView(getLineDivider())
-            }
-        }
     }
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        chartData.forEachIndexed { index, chartData ->
-            menu.add(Menu.NONE, index, Menu.NONE, "Chart ${index + 1}")
-        }
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        charts = chartData[item.itemId]
-        loadChartData(false)
-        return true
-    }
+//    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+//        chartData.forEachIndexed { index, chartData ->
+//            menu.add(Menu.NONE, index, Menu.NONE, "Chart ${index + 1}")
+//        }
+//        return true
+//    }
+//
+//    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+//        charts = chartData[item.itemId]
+//        loadChartData(false)
+//        return true
+//    }
 
     private fun loadChartData(animate: Boolean) {
         chartViewPreview.loadChartData(charts, animate)
         chart.loadChartData(charts, animate)
 
         chartChecks.removeAllViews()
-        val checkBoxes = charts.getYChars().map { getCheckBox(it) }
+        val checkBoxes = charts.getYChars(false).map { getCheckBox(it) }
         checkBoxes.forEachIndexed { index, checkBox ->
             chartChecks.addView(checkBox)
             if (index != checkBoxes.lastIndex) {
@@ -83,7 +75,7 @@ class MainActivity : AppCompatActivity() {
             isChecked = chart.enable
 
             setOnCheckedChangeListener { _, isChecked ->
-                if (isChecked.not() && charts.getYChars().count { it.enable } <= 1) {
+                if (isChecked.not() && charts.getYChars(false).count { it.enable } <= 1) {
                     setChecked(true)
                     return@setOnCheckedChangeListener
                 }
