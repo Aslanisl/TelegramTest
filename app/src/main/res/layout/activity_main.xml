@@ -22,7 +22,8 @@
         android:id="@+id/chartView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_margin="@dimen/spacing_normal"
+        android:layout_marginTop="@dimen/spacing_normal"
+        android:layout_marginBottom="@dimen/spacing_normal"
         android:layout_weight="1" />
 
     <ru.aslanisl.telegramtest.chart.ChartViewPreview

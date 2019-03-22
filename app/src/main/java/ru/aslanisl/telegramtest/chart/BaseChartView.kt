@@ -164,20 +164,22 @@ open class BaseChartView
         if (startXFactor == oldStartXFactor && endXFactor == oldEndXFactor && force.not()) return
 
         startXChartIndex = 0
-        endXChartIndex = xChart.values.size - 1
+        endXChartIndex = xChart.values.lastIndex
 
         if (startXFactor > -1f && endXFactor > -1f) {
             fromX = minXChart + startXFactor * widthX
             val toX = minXChart + endXFactor * widthX
             xChart.values.forEachIndexed { index, value ->
                 if (value > fromX && startXChartIndex == 0) {
-                    startXChartIndex = if (index > 0) index + 1 else index
+                    startXChartIndex = index
                 }
-                if (value > toX && endXChartIndex == xChart.values.size - 1) {
-                    endXChartIndex = if (index < xChart.values.size - 1) index - 1 else index
+                if (value > toX && endXChartIndex == xChart.values.lastIndex) {
+                    endXChartIndex = index
                 }
             }
             widthX = (toX - fromX).roundToLong()
+            if (startXChartIndex > 0) startXChartIndex--
+            if (endXChartIndex < xChart.values.lastIndex) endXChartIndex++
         } else {
             fromX = minXChart.toFloat()
         }

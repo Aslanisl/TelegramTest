@@ -39,6 +39,8 @@ class ChartView
     private var touchX: Float = 0f
     private var previousValueX = 0f
 
+    private val spacingNormal by lazy { resources.getDimensionPixelSize(R.dimen.spacing_normal).toFloat() }
+
     private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
         color = ContextCompat.getColor(context, R.color.yAxisLine)
@@ -123,7 +125,7 @@ class ChartView
             // Draw Axis Y
             for (i in 0 until AXIS_Y_COUNT) {
                 val y = chartHeight - lineStep * i
-                canvas.drawRect(0f, y, width.toFloat(), y - lineWidth, linePaint)
+                canvas.drawRect(spacingNormal, y, width.toFloat() - spacingNormal, y - lineWidth, linePaint)
             }
             super.onDraw(canvas)
             for (i in 0 until AXIS_Y_COUNT) {
@@ -131,7 +133,7 @@ class ChartView
 
                 val textY = y - lineWidth - textMargin
                 val text = (lineCount * i).roundToInt().toString()
-                canvas.drawText(text, textMargin, textY, textPaint)
+                canvas.drawText(text, textMargin + spacingNormal, textY, textPaint)
             }
             // Draw Info bar if need it
             drawInfo(canvas)
