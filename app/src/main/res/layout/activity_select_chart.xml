@@ -3,14 +3,14 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/white"
+    android:background="?attr/colorMainBackground"
     tools:context=".activity.SelectChartActivity">
 
     <LinearLayout
         android:id="@+id/chartSelect"
-        android:layout_marginTop="@dimen/spacing_normal_half"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/spacing_normal_half"
         android:orientation="vertical" />
 
 </FrameLayout>

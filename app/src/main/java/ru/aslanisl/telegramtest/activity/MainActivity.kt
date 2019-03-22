@@ -4,10 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.support.v4.content.ContextCompat
-import android.support.v7.app.AppCompatActivity
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -20,11 +18,10 @@ import ru.aslanisl.telegramtest.chart.ChartViewPreview.*
 import ru.aslanisl.telegramtest.model.Chart
 import ru.aslanisl.telegramtest.model.ChartData
 import ru.aslanisl.telegramtest.utils.JsonParser
-import ru.aslanisl.telegramtest.utils.ThemeUtils
 
 private const val KEY_INDEX_CHART = "KEY"
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : RecreateActivity() {
 
     private lateinit var charts: ChartData
     private val spacingSmall by lazy { resources.getDimensionPixelSize(R.dimen.spacing_small) }
@@ -52,7 +49,7 @@ class MainActivity : AppCompatActivity() {
         chartData = JsonParser.parseJson(this)
 
         charts = chartData[chartIndex]
-        loadChartData(true)
+        loadChartData(false)
         chartViewPreview.setPreviewAreaChangeListener(object : PreviewAreaChangeListener {
             override fun changeFactors(startXFactor: Float, endXFactor: Float) {
                 chartView.updateDrawFactors(startXFactor, endXFactor)
@@ -66,8 +63,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onOptionsItemSelected(item: MenuItem?): Boolean {
-        ThemeUtils.changeTheme()
-        invalidateColors()
+        if (themeChanging) return false
+        changeTheme(screenWidthPx / 2, screenHeightPx / 2)
         return true
     }
 
@@ -91,6 +88,7 @@ class MainActivity : AppCompatActivity() {
             val color = if (chart.color.isNullOrEmpty().not()) Color.parseColor(chart.color) else Color.BLUE
             buttonTintList = ColorStateList.valueOf(color)
             isChecked = chart.enable
+            setTextColor(Color.BLACK)
 
             setOnCheckedChangeListener { _, isChecked ->
                 if (isChecked.not() && charts.getYChars().count { it.enable } <= 1) {
@@ -99,8 +97,6 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 chart.enable = isChecked
-//                chartView.update()
-//                chartViewPreview.update()
             }
 
             layoutParams = getLayoutParamsCheckBox()
@@ -126,13 +122,5 @@ class MainActivity : AppCompatActivity() {
                 setMargins(dividerSpacing, 0, dividerSpacing, 0)
             }
         }
-    }
-
-    private fun invalidateColors() {
-        window?.statusBarColor = ThemeUtils.getStatusBarColor(this)
-        actionBar?.setBackgroundDrawable(ColorDrawable(ThemeUtils.getToolbarColor(this)))
-        window?.decorView?.setBackgroundColor(ThemeUtils.getWindowColor(this))
-        mainView.setBackgroundColor(ThemeUtils.getBackgroundColor(this))
-        chartViewPreview.setBackgroundColor(ThemeUtils.getChartPreviewBackgroundColor(this))
     }
 }

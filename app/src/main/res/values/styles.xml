@@ -1,12 +1,30 @@
 <resources>
 
     <!-- Base application theme. -->
-    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+    <style name="AppTheme" parent="@android:style/Theme.Material">
         <!-- Customize your theme here. -->
-        <item name="colorPrimary">@color/colorPrimary</item>
-        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
-        <item name="colorAccent">@color/colorAccent</item>
+        <item name="android:colorPrimary">@color/colorPrimary</item>
+        <item name="android:colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="android:windowBackground">@color/windowBackground</item>
     </style>
+
+    <style name="LightTheme" parent="AppTheme">
+        <item name="android:colorPrimary">@color/toolbarLight</item>
+        <item name="android:colorPrimaryDark">@color/statusBarLight</item>
+        <item name="android:windowBackground">@color/windowBackgroundLight</item>
+        <item name="colorMainBackground">@color/backgroundLight</item>
+        <item name="colorTextMain">@android:color/black</item>
+    </style>
+
+    <style name="DarkTheme" parent="AppTheme">
+        <item name="android:colorPrimary">@color/toolbarDark</item>
+        <item name="android:colorPrimaryDark">@color/statusBarDark</item>
+        <item name="android:windowBackground">@color/windowBackgroundDark</item>
+        <item name="colorMainBackground">@color/backgroundDark</item>
+        <item name="colorTextMain">@android:color/white</item>
+    </style>
+
+    <attr name="colorMainBackground" format="color" />
+    <attr name="colorTextMain" format="color" />
 
 </resources>

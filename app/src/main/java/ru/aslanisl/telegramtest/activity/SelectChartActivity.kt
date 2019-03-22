@@ -1,9 +1,9 @@
 package ru.aslanisl.telegramtest.activity
 
+import android.app.Activity
 import android.graphics.Color
 import android.os.Bundle
 import android.support.v4.content.ContextCompat
-import android.support.v7.app.AppCompatActivity
 import android.util.TypedValue
 import android.view.View
 import android.view.ViewGroup
@@ -13,7 +13,7 @@ import kotlinx.android.synthetic.main.activity_select_chart.*
 import ru.aslanisl.telegramtest.R
 import ru.aslanisl.telegramtest.utils.JsonParser
 
-class SelectChartActivity : AppCompatActivity() {
+class SelectChartActivity : BaseActivity() {
 
     private val fontNormalSize by lazy { resources.getDimensionPixelSize(R.dimen.font_big).toFloat() }
     private val spacingNormal by lazy { resources.getDimensionPixelSize(R.dimen.spacing_normal) }
@@ -44,6 +44,7 @@ class SelectChartActivity : AppCompatActivity() {
 
             setOnClickListener {
                 MainActivity.selectChart(this@SelectChartActivity, index)
+                finish()
             }
 
             layoutParams = getLayoutParamsTextView()
