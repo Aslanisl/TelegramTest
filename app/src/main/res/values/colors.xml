@@ -8,5 +8,22 @@
     <color name="YAxisLabel">#8B979F</color>
     <color name="greyLight">#66D4E1EB</color>
     <color name="infoLine">#D1D1D1</color>
+
+
     <color name="windowBackground">#ECECEC</color>
+
+    <color name="statusBarLight">#3B5674</color>
+    <color name="statusBarDark">#1C222B</color>
+
+    <color name="toolbarLight">#487095</color>
+    <color name="toolbarDark">#202934</color>
+
+    <color name="backgroundLight">#FFFFFF</color>
+    <color name="backgroundDark">#1E252D</color>
+
+    <color name="windowBackgroundLight">#ECECEC</color>
+    <color name="windowBackgroundDark">#181E25</color>
+
+    <color name="chartPreviewBackgroundColorLight">#F2F5F6</color>
+    <color name="chartPreviewBackgroundColorDark">#1B212B</color>
 </resources>

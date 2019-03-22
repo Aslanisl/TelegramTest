@@ -37,7 +37,7 @@ class ChartViewPreview
     }
 
     init {
-        enableYMaxAdding = true
+        enableYAdding = true
         enableXAxis = false
     }
 

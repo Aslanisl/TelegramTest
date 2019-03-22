@@ -43,7 +43,7 @@ open class BaseChartView
     protected var fromX: Float = 0f
     protected var factorY: Float = 0f
 
-    protected var enableYMaxAdding = true
+    protected var enableYAdding = true
     protected var enableXAxis = true
 
     protected val chartHeight: Int
@@ -62,7 +62,7 @@ open class BaseChartView
     private var maxXChart = Long.MIN_VALUE
 
     protected var maxY = 0L
-    protected var yTopValueMargin = 20
+    protected var yMargin = 20
     protected var minY = 0L
 
     private var updateChartThread: UpdateChartThread? = null
@@ -190,9 +190,9 @@ open class BaseChartView
     }
 
     private fun calculateYMarginTop() {
-        val maxY = getMaxYFromChart(true)
+        val dif = getMaxYFromChart(true)
         // Add 5% for top margin
-        yTopValueMargin = (maxY * 0.05).roundToInt()
+        yMargin = (dif * 0.05).roundToInt()
     }
 
     private fun getMaxYFromChart(allChart: Boolean = false, checkEnable: Boolean = true): Long {
@@ -206,7 +206,7 @@ open class BaseChartView
                 }
             }
         }
-        if (enableYMaxAdding) maxY += yTopValueMargin
+        if (enableYAdding) maxY += yMargin
         return maxY
     }
 
@@ -221,28 +221,37 @@ open class BaseChartView
                 }
             }
         }
+//        if (enableYAdding) minY -= yMargin
         return minY
     }
 
     private fun updateMaxYFactorY(toMaxY: Long) {
-        this.maxY = toMaxY
-        if (enableYMaxAdding) maxY += yTopValueMargin
+        maxY = toMaxY
+        if (enableYAdding) maxY += yMargin
         factorY = chartHeight.toFloat() / (maxY - minY)
+    }
+
+    private fun updateMinYFactorY(toMinY: Long) {
+//        minY = 0L
+//        if (enableYAdding) minY -= yMargin
+//        factorY = chartHeight.toFloat() / (maxY - minY)
     }
 
     private fun initUpdate() {
         updateChartThread = UpdateChartThread()
-        updateChartThread?.callback = { newMax ->
-            updateMaxY()
-            if (isNeedToUpdate(newMax)) updateForYMax(newMax)
+        updateChartThread?.callback = { newMax, newMin ->
+            updateY()
+            if (isNeedToUpdate(newMax, newMin)) updateForY(newMax, newMin)
         }
         setUpdateChartStep()
     }
 
-    private fun isNeedToUpdate(newMax: Long) : Boolean {
-        val newMaxY = if (enableYMaxAdding) newMax + yTopValueMargin else newMax
+    private fun isNeedToUpdate(newMax: Long, newMin: Long) : Boolean {
+        val newMaxY = if (enableYAdding) newMax + yMargin else newMax
+//        val newMinY = if (enableYAdding) newMin - yMargin else newMin
         val isNeedToRedraw = yCharts.any { it.isNeedToRedraw() }
         val notChange = newMaxY == maxY
+//            && newMinY == minY
             && startXFactor == oldStartXFactor
             && endXFactor == oldEndXFactor
             && yCharts.any { isNeedToRedraw.not() }
@@ -253,12 +262,13 @@ open class BaseChartView
         if (animation) {
             // Update Thread making work
         } else {
-            updateForYMax(getMaxYFromChart())
+            updateForY(getMaxYFromChart(), getMinYFromChart())
         }
     }
 
-    private fun updateForYMax(yMax: Long) {
+    private fun updateForY(yMax: Long, yMin: Long) {
         updateMaxYFactorY(yMax)
+//        updateMinYFactorY(yMin)
         updateChartIndexesFactorX()
         updatePaths()
         chartDataFactorsChanges()
@@ -274,8 +284,9 @@ open class BaseChartView
         updateChartThread?.setStep(step.roundToLong())
     }
 
-    private fun updateMaxY() {
+    private fun updateY() {
         updateChartThread?.setToMaxY(getMaxYFromChart())
+//        updateChartThread?.setToMinY(getMinYFromChart())
     }
 
     // Min Y always == 0
@@ -329,10 +340,15 @@ open class BaseChartView
         private val mainThreadHandler by lazy { Handler(Looper.getMainLooper()) }
         private var toMaxY: Long = 0L
         private var currentMaxY: Long = 0L
-        private var step: Long = 0
-        private var stepInternal: Long = 0
 
-        var callback: ((Long) -> Unit)? = null
+        private var toMinY: Long = 0L
+        private var currentMinY: Long = 0L
+
+        private var step: Long = 0
+        private var stepMaxInternal: Long = 0
+        private var stepMinInternal: Long = 0
+
+        var callback: ((maxY: Long, minY: Long) -> Unit)? = null
 
         private var isRunning = true
 
@@ -353,8 +369,14 @@ open class BaseChartView
 
         fun setToMaxY(toMaxY: Long) {
             this.toMaxY = toMaxY
-            if (toMaxY < currentMaxY) stepInternal = -step
-            if (toMaxY >= currentMaxY) stepInternal = step
+            if (toMaxY < currentMaxY) stepMaxInternal = -step
+            if (toMaxY >= currentMaxY) stepMaxInternal = step
+        }
+
+        fun setToMinY(toMinY: Long) {
+            this.toMinY = toMinY
+            if (toMinY < currentMinY) stepMinInternal = -step
+            if (toMinY >= currentMinY) stepMinInternal = step
         }
 
         fun exit() {
@@ -364,11 +386,16 @@ open class BaseChartView
         override fun run() {
             while (isRunning) {
                 try {
-                    currentMaxY += stepInternal
-                    if (currentMaxY > toMaxY && stepInternal > 0) currentMaxY = toMaxY
-                    if (currentMaxY < toMaxY && stepInternal <= 0) currentMaxY = toMaxY
+                    currentMaxY += stepMaxInternal
+                    if (currentMaxY > toMaxY && stepMaxInternal > 0) currentMaxY = toMaxY
+                    if (currentMaxY < toMaxY && stepMaxInternal <= 0) currentMaxY = toMaxY
+
+//                    currentMinY += stepMinInternal
+//                    if (currentMinY > toMinY && stepMinInternal > 0) currentMinY = toMinY
+//                    if (currentMinY < toMinY && stepMinInternal <= 0) currentMinY = toMinY
+
                     mainThreadHandler.post {
-                        callback?.invoke(currentMaxY)
+                        callback?.invoke(currentMaxY, currentMinY)
                     }
                     Thread.sleep(delay)
                     Log.d("TAGLOGThread", "Working")

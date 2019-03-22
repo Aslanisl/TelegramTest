@@ -4,19 +4,23 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Color
-import android.support.v7.app.AppCompatActivity
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.support.v4.content.ContextCompat
+import android.support.v7.app.AppCompatActivity
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.CheckBox
 import android.widget.LinearLayout
 import kotlinx.android.synthetic.main.activity_main.*
 import ru.aslanisl.telegramtest.R
+import ru.aslanisl.telegramtest.chart.ChartViewPreview.*
 import ru.aslanisl.telegramtest.model.Chart
 import ru.aslanisl.telegramtest.model.ChartData
-import ru.aslanisl.telegramtest.chart.ChartViewPreview.*
 import ru.aslanisl.telegramtest.utils.JsonParser
+import ru.aslanisl.telegramtest.utils.ThemeUtils
 
 private const val KEY_INDEX_CHART = "KEY"
 
@@ -54,6 +58,17 @@ class MainActivity : AppCompatActivity() {
                 chartView.updateDrawFactors(startXFactor, endXFactor)
             }
         })
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(ru.aslanisl.telegramtest.R.menu.menu, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem?): Boolean {
+        ThemeUtils.changeTheme()
+        invalidateColors()
+        return true
     }
 
     private fun loadChartData(animate: Boolean) {
@@ -111,5 +126,13 @@ class MainActivity : AppCompatActivity() {
                 setMargins(dividerSpacing, 0, dividerSpacing, 0)
             }
         }
+    }
+
+    private fun invalidateColors() {
+        window?.statusBarColor = ThemeUtils.getStatusBarColor(this)
+        actionBar?.setBackgroundDrawable(ColorDrawable(ThemeUtils.getToolbarColor(this)))
+        window?.decorView?.setBackgroundColor(ThemeUtils.getWindowColor(this))
+        mainView.setBackgroundColor(ThemeUtils.getBackgroundColor(this))
+        chartViewPreview.setBackgroundColor(ThemeUtils.getChartPreviewBackgroundColor(this))
     }
 }

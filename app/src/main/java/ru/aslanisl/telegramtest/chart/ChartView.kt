@@ -16,7 +16,6 @@ import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 import kotlin.system.measureNanoTime
 
-private const val AXIS_Y_COUNT = 6
 private const val VALUE_CIRCLE_RADIUS = 16f
 
 class ChartView
@@ -26,10 +25,6 @@ class ChartView
     @AttrRes defStyleAttr: Int = 0
 ) : BaseChartView(context, attrs, defStyleAttr) {
 
-    private var lineStep = 0f
-    private var lineCount = 0f
-    private val lineWidth = resources.getDimensionPixelSize(R.dimen.Y_axis_width)
-    private val textMargin = resources.getDimensionPixelSize(R.dimen.spacing_small).toFloat()
     private val infoPointStrokeWidth = resources.getDimensionPixelSize(R.dimen.info_point_stoke_width).toFloat()
 
     private val infoLineWidthHalf = resources.getDimensionPixelSize(R.dimen.info_line_width) / 2
@@ -39,12 +34,6 @@ class ChartView
     private var touchX: Float = 0f
     private var previousValueX = 0f
 
-    private val spacingNormal by lazy { resources.getDimensionPixelSize(R.dimen.spacing_normal).toFloat() }
-
-    private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
-        color = ContextCompat.getColor(context, R.color.yAxisLine)
-    }
 
     private val infoLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
@@ -61,25 +50,14 @@ class ChartView
         strokeWidth = infoPointStrokeWidth
     }
 
-    private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
-        color = ContextCompat.getColor(context, R.color.YAxisLabel)
-        textSize = resources.getDimensionPixelSize(R.dimen.Y_axis_label).toFloat()
-    }
-
-    private val xAxisTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
-        color = ContextCompat.getColor(context, R.color.YAxisLabel)
-        textSize = resources.getDimensionPixelSize(R.dimen.Y_axis_label).toFloat()
-        textAlign = Paint.Align.CENTER
-    }
-
     private val infoBar = InfoBar()
     private val xAxis = XAxis()
+    private val yAxis = YAxis()
 
     init {
         infoBar.initResources(context)
         xAxis.initResources(context)
+        yAxis.initResources(context)
 
         axisXHeight = xAxis.findMaxHeight().roundToInt()
     }
@@ -87,22 +65,16 @@ class ChartView
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         infoBar.setMaxWidth(w.toFloat(), false)
+        yAxis.setChartWidthHeight(w, chartHeight)
         xAxis.setMaxWidth(w)
     }
 
     override fun chartDataChanges() {
         xAxis.setXLabels(xChart)
-        updateYAxis()
     }
 
     override fun chartDataFactorsChanges() {
-        updateYAxis()
-    }
-
-    private fun updateYAxis() {
-        if (chartHeight <= 0) return
-        lineStep = chartHeight.toFloat() / AXIS_Y_COUNT
-        lineCount = maxY.toFloat() / AXIS_Y_COUNT
+        yAxis.setMaxMinY(maxY, minY)
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -115,26 +87,15 @@ class ChartView
             || eventMasked == MotionEvent.ACTION_POINTER_DOWN
             || eventMasked == MotionEvent.ACTION_MOVE
 
-        Log.d("TAGLOGChartTouch", "time = ${System.currentTimeMillis()}")
         invalidate()
         return true
     }
 
     override fun onDraw(canvas: Canvas) {
         val time = measureNanoTime {
-            // Draw Axis Y
-            for (i in 0 until AXIS_Y_COUNT) {
-                val y = chartHeight - lineStep * i
-                canvas.drawRect(spacingNormal, y, width.toFloat() - spacingNormal, y - lineWidth, linePaint)
-            }
+            yAxis.drawLines(canvas)
             super.onDraw(canvas)
-            for (i in 0 until AXIS_Y_COUNT) {
-                val y = chartHeight - lineStep * i
-
-                val textY = y - lineWidth - textMargin
-                val text = (lineCount * i).roundToInt().toString()
-                canvas.drawText(text, textMargin + spacingNormal, textY, textPaint)
-            }
+            yAxis.drawLabels(canvas)
             // Draw Info bar if need it
             drawInfo(canvas)
         }
