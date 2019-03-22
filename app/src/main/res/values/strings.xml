@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">TelegramTest</string>
 
+    <string name="select_chart">Select chart</string>
     <string name="followers">Followers</string>
     <string name="statistics">Statistics</string>
 </resources>

@@ -1,4 +1,4 @@
-package ru.aslanisl.telegramtest
+package ru.aslanisl.telegramtest.chart
 
 import android.content.Context
 import android.graphics.Canvas
@@ -13,13 +13,16 @@ import android.support.v4.graphics.ColorUtils
 import android.util.AttributeSet
 import android.util.Log
 import android.view.View
+import ru.aslanisl.telegramtest.model.ChartData
+import ru.aslanisl.telegramtest.R.*
+import ru.aslanisl.telegramtest.model.Chart
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 
 private const val AXIS_X_HEIGHT = 250
 
-private const val ANIMATION_STEP_FACTOR = 7
+private const val ANIMATION_STEP_FACTOR = 15
 
 open class BaseChartView
 @JvmOverloads constructor(
@@ -29,7 +32,7 @@ open class BaseChartView
 ) : View(context, attrs, defStyleAttr) {
 
     init {
-        minimumHeight = resources.getDimensionPixelSize(R.dimen.chart_preview_min_height)
+        minimumHeight = resources.getDimensionPixelSize(dimen.chart_preview_min_height)
     }
 
     protected var xChart: Chart? = null
@@ -83,7 +86,7 @@ open class BaseChartView
         }
 
     private var linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        strokeWidth = resources.getDimensionPixelSize(R.dimen.chart_preview_stroke_width).toFloat()
+        strokeWidth = resources.getDimensionPixelSize(dimen.chart_preview_stroke_width).toFloat()
         style = Paint.Style.STROKE
         strokeCap = Cap.SQUARE
         strokeJoin = Join.ROUND
@@ -267,7 +270,7 @@ open class BaseChartView
 
     fun update(animation: Boolean = true) {
         if (animation && enableAnimation) {
-            updateAnimation()
+            // Update Thread making work
         } else {
             updateForYMax(getMaxYFromChart())
         }
@@ -323,7 +326,13 @@ open class BaseChartView
         }
 
         dirty = false
+
+        val time = System.currentTimeMillis()
+        Log.d("TAGLOGDrawTime", "Time: (${time - lastTimeDraw})")
+        lastTimeDraw = time
     }
+
+    private var lastTimeDraw = System.currentTimeMillis()
 
     open fun drawXAxis(canvas: Canvas) {}
 

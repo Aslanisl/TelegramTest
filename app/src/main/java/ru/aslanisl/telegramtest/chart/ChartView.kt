@@ -1,4 +1,4 @@
-package ru.aslanisl.telegramtest
+package ru.aslanisl.telegramtest.chart
 
 import android.content.Context
 import android.graphics.Canvas
@@ -9,9 +9,9 @@ import android.support.v4.content.ContextCompat
 import android.util.AttributeSet
 import android.util.Log
 import android.view.MotionEvent
-import java.text.SimpleDateFormat
+import ru.aslanisl.telegramtest.R
+import ru.aslanisl.telegramtest.utils.nearestNumberBinarySearch
 import java.util.Date
-import java.util.Locale
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 import kotlin.system.measureNanoTime

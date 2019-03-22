@@ -1,5 +1,7 @@
-package ru.aslanisl.telegramtest
+package ru.aslanisl.telegramtest.activity
 
+import android.content.Context
+import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.support.v7.app.AppCompatActivity
@@ -10,7 +12,13 @@ import android.view.ViewGroup
 import android.widget.CheckBox
 import android.widget.LinearLayout
 import kotlinx.android.synthetic.main.activity_main.*
-import ru.aslanisl.telegramtest.ChartViewPreview.*
+import ru.aslanisl.telegramtest.R
+import ru.aslanisl.telegramtest.model.Chart
+import ru.aslanisl.telegramtest.model.ChartData
+import ru.aslanisl.telegramtest.chart.ChartViewPreview.*
+import ru.aslanisl.telegramtest.utils.JsonParser
+
+private const val KEY_INDEX_CHART = "KEY"
 
 class MainActivity : AppCompatActivity() {
 
@@ -21,15 +29,25 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var chartData: List<ChartData>
 
+    companion object {
+        fun selectChart(context: Context, index: Int) {
+            context.startActivity(Intent(context, MainActivity::class.java).apply {
+                putExtra(KEY_INDEX_CHART, index)
+            })
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         title = getString(R.string.statistics)
 
+        val chartIndex = intent?.getIntExtra(KEY_INDEX_CHART, 0) ?: 0
+
         chartData = JsonParser.parseJson(this)
 
-        charts = chartData[0]
+        charts = chartData[chartIndex]
         loadChartData(true)
         chartViewPreview.setPreviewAreaChangeListener(object : PreviewAreaChangeListener {
             override fun changeFactors(startXFactor: Float, endXFactor: Float) {
@@ -37,19 +55,6 @@ class MainActivity : AppCompatActivity() {
             }
         })
     }
-
-//    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-//        chartData.forEachIndexed { index, chartData ->
-//            menu.add(Menu.NONE, index, Menu.NONE, "Chart ${index + 1}")
-//        }
-//        return true
-//    }
-//
-//    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-//        charts = chartData[item.itemId]
-//        loadChartData(false)
-//        return true
-//    }
 
     private fun loadChartData(animate: Boolean) {
         chartViewPreview.loadChartData(charts, animate)

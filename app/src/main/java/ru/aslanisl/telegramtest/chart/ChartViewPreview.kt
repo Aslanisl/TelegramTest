@@ -1,4 +1,4 @@
-package ru.aslanisl.telegramtest
+package ru.aslanisl.telegramtest.chart
 
 import android.content.Context
 import android.graphics.Canvas
@@ -10,7 +10,7 @@ import android.support.v4.content.ContextCompat
 import android.util.AttributeSet
 import android.util.Log
 import android.view.MotionEvent
-import ru.aslanisl.telegramtest.ChartViewPreview.ResizeCorner.*
+import ru.aslanisl.telegramtest.R
 import kotlin.system.measureNanoTime
 
 private const val AREA_WIDTH_DEFAULT = 300f
@@ -75,12 +75,12 @@ class ChartViewPreview
         val resizeCorner = getResizeCorner(x)
 
         when (resizeCorner) {
-            LEFT -> {
+            ResizeCorner.LEFT -> {
                 if (x < 0) return
                 if (selectAreaRectF.right - x < AREA_WIDTH_MIN) return
                 selectAreaRectF.left = x
             }
-            RIGHT -> {
+            ResizeCorner.RIGHT -> {
                 if (x > this.width) return
                 if (x - selectAreaRectF.left < AREA_WIDTH_MIN) return
                 selectAreaRectF.right = x

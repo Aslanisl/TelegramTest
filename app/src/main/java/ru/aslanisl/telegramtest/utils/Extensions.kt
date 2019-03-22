@@ -1,4 +1,4 @@
-package ru.aslanisl.telegramtest
+package ru.aslanisl.telegramtest.utils
 
 import android.graphics.Paint
 

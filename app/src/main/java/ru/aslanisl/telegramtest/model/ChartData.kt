@@ -1,4 +1,4 @@
-package ru.aslanisl.telegramtest
+package ru.aslanisl.telegramtest.model
 
 data class ChartData(val charts: List<Chart>) {
 

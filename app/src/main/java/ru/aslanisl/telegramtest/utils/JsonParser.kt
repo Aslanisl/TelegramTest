@@ -1,19 +1,28 @@
-package ru.aslanisl.telegramtest
+package ru.aslanisl.telegramtest.utils
 
 import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
+import ru.aslanisl.telegramtest.R.*
+import ru.aslanisl.telegramtest.model.Chart
+import ru.aslanisl.telegramtest.model.ChartData
 import java.lang.Exception
 
 object JsonParser {
 
-    fun parseJson(context: Context): List<ChartData>  {
+    private var tempData: List<ChartData>? = null
+
+    fun parseJson(context: Context): List<ChartData> {
+        var temp = tempData
+        if (temp != null) return temp
         val chartData = context
             .resources
-            .openRawResource(R.raw.chart_data)
+            .openRawResource(raw.chart_data)
             .bufferedReader()
             .use { it.readText() }
-        return parseJsonString(chartData)
+        temp = parseJsonString(chartData)
+        tempData = temp
+        return temp
     }
 
     private fun parseJsonString(jsonString: String): List<ChartData> {
@@ -49,7 +58,7 @@ object JsonParser {
                         }
                     }
                 }
-                val chart = Chart(title,values, type, name, color)
+                val chart = Chart(title, values, type, name, color)
                 charts.add(chart)
             }
 
@@ -59,21 +68,21 @@ object JsonParser {
     }
 
 
-    fun JSONArray.forEachObject(action: (JSONObject, index :Int) -> Unit) {
+    fun JSONArray.forEachObject(action: (JSONObject, index: Int) -> Unit) {
         for (i in 0..(length() - 1)) {
             val item = getJSONObject(i)
             action.invoke(item, i)
         }
     }
 
-    fun JSONArray.forEachArray(action: (JSONArray, index :Int) -> Unit) {
+    fun JSONArray.forEachArray(action: (JSONArray, index: Int) -> Unit) {
         for (i in 0..(length() - 1)) {
             val item = getJSONArray(i)
             action.invoke(item, i)
         }
     }
 
-    fun JSONArray.forEachAny(action: (Any, index :Int) -> Unit) {
+    fun JSONArray.forEachAny(action: (Any, index: Int) -> Unit) {
         for (i in 0..(length() - 1)) {
             val item = get(i)
             action.invoke(item, i)
@@ -83,7 +92,7 @@ object JsonParser {
     fun JSONObject.getOrNull(name: String): Any? {
         return try {
             get(name)
-        } catch (e: Exception){
+        } catch (e: Exception) {
             e.printStackTrace()
             null
         }

@@ -2,10 +2,11 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="match_parent"
+    android:layout_marginBottom="@dimen/spacing_big"
     android:background="@android:color/white"
     android:orientation="vertical"
-    tools:context=".MainActivity">
+    tools:context=".activity.MainActivity">
 
     <TextView
         android:layout_width="match_parent"
@@ -17,13 +18,14 @@
         android:textSize="18sp"
         android:textStyle="bold" />
 
-    <ru.aslanisl.telegramtest.ChartView
+    <ru.aslanisl.telegramtest.chart.ChartView
         android:id="@+id/chartView"
         android:layout_width="match_parent"
-        android:layout_height="300dp"
-        android:layout_margin="@dimen/spacing_normal" />
+        android:layout_height="0dp"
+        android:layout_margin="@dimen/spacing_normal"
+        android:layout_weight="1" />
 
-    <ru.aslanisl.telegramtest.ChartViewPreview
+    <ru.aslanisl.telegramtest.chart.ChartViewPreview
         android:id="@+id/chartViewPreview"
         android:layout_width="match_parent"
         android:layout_height="70dp"

@@ -1,13 +1,14 @@
-package ru.aslanisl.telegramtest
+package ru.aslanisl.telegramtest.chart
 
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
-import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.support.v4.content.ContextCompat
+import ru.aslanisl.telegramtest.R
+import ru.aslanisl.telegramtest.utils.getTextHeight
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

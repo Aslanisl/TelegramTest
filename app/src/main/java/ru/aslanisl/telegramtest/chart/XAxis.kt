@@ -1,9 +1,12 @@
-package ru.aslanisl.telegramtest
+package ru.aslanisl.telegramtest.chart
 
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.support.v4.content.ContextCompat
+import ru.aslanisl.telegramtest.R
+import ru.aslanisl.telegramtest.utils.getTextHeight
+import ru.aslanisl.telegramtest.model.Chart
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

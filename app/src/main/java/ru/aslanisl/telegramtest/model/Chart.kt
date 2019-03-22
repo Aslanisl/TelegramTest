@@ -1,4 +1,4 @@
-package ru.aslanisl.telegramtest
+package ru.aslanisl.telegramtest.model
 
 private const val ALPHA_STEP = 0.01f
 
