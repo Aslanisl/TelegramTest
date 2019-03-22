@@ -22,7 +22,7 @@ import kotlin.math.roundToLong
 
 private const val AXIS_X_HEIGHT = 250
 
-private const val ANIMATION_STEP_FACTOR = 15
+private const val ANIMATION_STEP_FACTOR = 8
 
 open class BaseChartView
 @JvmOverloads constructor(
@@ -43,18 +43,8 @@ open class BaseChartView
     protected var fromX: Float = 0f
     protected var factorY: Float = 0f
 
-    protected var enableAnimation: Boolean = false
-
     protected var enableYMaxAdding = true
-        set(value) {
-            field = value
-            update(false)
-        }
     protected var enableXAxis = true
-        set(value) {
-            field = value
-            update(false)
-        }
 
     protected val chartHeight: Int
         get() = if (enableXAxis) height - axisXHeight else height
@@ -68,8 +58,6 @@ open class BaseChartView
     protected var startXChartIndex: Int = 0
     protected var endXChartIndex: Int = 0
 
-    private var dirty = false
-
     private var minXChart = Long.MAX_VALUE
     private var maxXChart = Long.MIN_VALUE
 
@@ -80,10 +68,6 @@ open class BaseChartView
     private var updateChartThread: UpdateChartThread? = null
 
     protected var axisXHeight = AXIS_X_HEIGHT
-        set(value) {
-            field = value
-            update(false)
-        }
 
     private var linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         strokeWidth = resources.getDimensionPixelSize(dimen.chart_preview_stroke_width).toFloat()
@@ -101,7 +85,7 @@ open class BaseChartView
         updateMinMaxXChart()
         updateChartIndexesFactorX(true)
 
-        setAnimationStep()
+        setUpdateChartStep()
         update(animate)
         chartDataChanges()
     }
@@ -109,11 +93,6 @@ open class BaseChartView
     fun updateDrawFactors(startXFactor: Float, endXFactor: Float) {
         this.startXFactor = startXFactor
         this.endXFactor = endXFactor
-
-        if (dirty) return
-        dirty = true
-
-        update()
     }
 
     private fun updateMinMaxXChart() {
@@ -249,13 +228,13 @@ open class BaseChartView
         factorY = chartHeight.toFloat() / (maxY - minY)
     }
 
-    private fun initAnimator() {
+    private fun initUpdate() {
         updateChartThread = UpdateChartThread()
         updateChartThread?.callback = { newMax ->
-            updateAnimation()
+            updateMaxY()
             if (isNeedToUpdate(newMax)) updateForYMax(newMax)
         }
-        setAnimationStep()
+        setUpdateChartStep()
     }
 
     private fun isNeedToUpdate(newMax: Long) : Boolean {
@@ -269,7 +248,7 @@ open class BaseChartView
     }
 
     fun update(animation: Boolean = true) {
-        if (animation && enableAnimation) {
+        if (animation) {
             // Update Thread making work
         } else {
             updateForYMax(getMaxYFromChart())
@@ -284,16 +263,16 @@ open class BaseChartView
         invalidate()
     }
 
-    private fun setAnimationStep() {
+    private fun setUpdateChartStep() {
         if (chartHeight <= 0) return
         val maxY = getMaxYFromChart(allChart = true, checkEnable = false)
         val minY = getMinYFromChart(allChart = true, checkEnable = false)
         val dif = abs(maxY - minY)
-        val step = (dif.toFloat() / chartHeight) * (chartHeight / ANIMATION_STEP_FACTOR)
+        val step = (dif.toFloat() / ANIMATION_STEP_FACTOR)
         updateChartThread?.setStep(step.roundToLong())
     }
 
-    private fun updateAnimation() {
+    private fun updateMaxY() {
         updateChartThread?.setToMaxY(getMaxYFromChart())
     }
 
@@ -305,7 +284,7 @@ open class BaseChartView
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         updateChartIndexesFactorX(force = true)
-        setAnimationStep()
+        setUpdateChartStep()
         update(false)
     }
 
@@ -325,8 +304,6 @@ open class BaseChartView
             canvas.restore()
         }
 
-        dirty = false
-
         val time = System.currentTimeMillis()
         Log.d("TAGLOGDrawTime", "Time: (${time - lastTimeDraw})")
         lastTimeDraw = time
@@ -338,13 +315,11 @@ open class BaseChartView
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
-        Log.d("TAGLogWindow", "onAttachedToWindow")
-        if (enableAnimation) initAnimator()
+        initUpdate()
     }
 
     override fun onDetachedFromWindow() {
         updateChartThread?.exit()
-        Log.d("TAGLogWindow", "onDetachedFromWindow")
         super.onDetachedFromWindow()
     }
 
