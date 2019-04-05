@@ -22,7 +22,7 @@ import kotlin.math.roundToLong
 
 private const val AXIS_X_HEIGHT = 250
 
-private const val ANIMATION_STEP_FACTOR = 8
+private const val ANIMATION_STEP_FACTOR = 4
 
 open class BaseChartView
 @JvmOverloads constructor(
@@ -33,6 +33,8 @@ open class BaseChartView
 
     init {
         minimumHeight = resources.getDimensionPixelSize(dimen.chart_preview_min_height)
+
+        super.setLayerType(View.LAYER_TYPE_HARDWARE, null)
     }
 
     protected var xChart: Chart? = null
@@ -49,7 +51,7 @@ open class BaseChartView
     protected val chartHeight: Int
         get() = if (enableXAxis) height - axisXHeight else height
 
-    private val paths = mutableListOf<ColorPath>()
+    private val lines = mutableListOf<ColorLines>()
 
     private var startXFactor: Float = -1f
     private var endXFactor: Float = -1f
@@ -109,9 +111,10 @@ open class BaseChartView
     protected open fun chartDataFactorsChanges() {}
 
     private fun updatePaths() {
-        paths.clear()
         xCoordinatesFactored.clear()
         yChartsFactored.clear()
+
+        lines.clear()
         if (chartHeight <= 0 || width == 0) return
         val xChart = xChart ?: return
 
@@ -125,22 +128,33 @@ open class BaseChartView
             val alphaDraw = chart.alpha
             if (alphaDraw <= 0f) continue
 
-            val path = Path()
             var lastX = -1f
             var lastY = -1f
             val yCoordinates = mutableListOf<Float>()
+
+            var color = if (chart.color == null) Color.BLACK else Color.parseColor(chart.color)
+            if (alphaDraw < 1) {
+                val alphaRange = (255 * alphaDraw).roundToInt()
+                color = ColorUtils.setAlphaComponent(color, alphaRange)
+            }
+            linePaint.apply { setColor(color) }
+
+            val points = mutableListOf<Float>()
 
             for (index in startXChartIndex..endXChartIndex) {
                 val x = xChart.values[index]
                 val y = chart.values[index]
 
                 val factorXValue = (x - fromX) * factorX
-                val factorYValue = (y - minY) * factorY
+                val tempFactorYValue = (y - minY) * factorY
+                val factorYValue = if (enableXAxis) tempFactorYValue + axisXHeight else tempFactorYValue
 
                 if (lastX == -1f && lastY == -1f) {
-                    path.moveTo(factorXValue, if (enableXAxis) factorYValue + axisXHeight else factorYValue)
                 } else {
-                    path.lineTo(factorXValue, if (enableXAxis) factorYValue + axisXHeight else factorYValue)
+                    points.add(lastX)
+                    points.add(lastY)
+                    points.add(factorXValue)
+                    points.add(factorYValue)
                 }
                 lastX = factorXValue
                 lastY = factorYValue
@@ -148,13 +162,8 @@ open class BaseChartView
                 yCoordinates.add(factorYValue)
             }
 
-            var color = if (chart.color == null) Color.BLACK else Color.parseColor(chart.color)
-            if (alphaDraw < 1) {
-                val alphaRange = (255 * alphaDraw).roundToInt()
-                color = ColorUtils.setAlphaComponent(color, alphaRange)
-            }
+            lines.add(ColorLines(points.toFloatArray(), color))
             yChartsFactored.add(YChart(yCoordinates, chart.title, color))
-            paths.add(ColorPath(path, color))
         }
     }
 
@@ -237,13 +246,21 @@ open class BaseChartView
 //        factorY = chartHeight.toFloat() / (maxY - minY)
     }
 
+    private var newMax: Long = 0L
+    private var newMin: Long = 0L
+
     private fun initUpdate() {
         updateChartThread = UpdateChartThread()
         updateChartThread?.callback = { newMax, newMin ->
             updateY()
-            if (isNeedToUpdate(newMax, newMin)) updateForY(newMax, newMin)
+            if (isNeedToUpdate(newMax, newMin)) {
+                this.newMax = newMax
+                this.newMin = newMin
+                updateForY()
+            }
         }
         setUpdateChartStep()
+        updateChartThread?.start()
     }
 
     private fun isNeedToUpdate(newMax: Long, newMin: Long) : Boolean {
@@ -262,13 +279,13 @@ open class BaseChartView
         if (animation) {
             // Update Thread making work
         } else {
-            updateForY(getMaxYFromChart(), getMinYFromChart())
+            updateForY()
         }
     }
 
-    private fun updateForY(yMax: Long, yMin: Long) {
-        updateMaxYFactorY(yMax)
-//        updateMinYFactorY(yMin)
+    private fun updateForY() {
+        updateMaxYFactorY(newMax)
+//        updateMinYFactorY(newMin)
         updateChartIndexesFactorX()
         updatePaths()
         chartDataFactorsChanges()
@@ -305,8 +322,8 @@ open class BaseChartView
         super.onDraw(canvas)
         canvas.save()
         canvas.scale(1f, -1f, width / 2f, height / 2f)
-        paths.forEach {
-            canvas.drawPath(it.path, linePaint.apply { color = it.color })
+        lines.forEach {
+            canvas.drawLines(it.points, linePaint.apply { color = it.color })
         }
         canvas.restore()
 
@@ -336,8 +353,8 @@ open class BaseChartView
         super.onDetachedFromWindow()
     }
 
-    private class UpdateChartThread : Thread("ChartThread") {
-        private val mainThreadHandler by lazy { Handler(Looper.getMainLooper()) }
+    private class UpdateChartThread : Runnable {
+        private val handler by lazy { Handler(Looper.getMainLooper()) }
         private var toMaxY: Long = 0L
         private var currentMaxY: Long = 0L
 
@@ -352,11 +369,21 @@ open class BaseChartView
 
         private var isRunning = true
 
-        private val delay = 8L
+        private val delay = 2L
 
-        init {
+        fun start() {
             isRunning = true
-            start()
+            schedule()
+        }
+
+        fun exit() {
+            handler.removeCallbacks(this)
+            isRunning = false
+        }
+
+        private fun schedule() {
+            handler.removeCallbacks(this)
+            handler.postDelayed(this, delay)
         }
 
         fun reset() {
@@ -379,33 +406,24 @@ open class BaseChartView
             if (toMinY >= currentMinY) stepMinInternal = step
         }
 
-        fun exit() {
-            isRunning = false
-        }
-
         override fun run() {
-            while (isRunning) {
-                try {
-                    currentMaxY += stepMaxInternal
-                    if (currentMaxY > toMaxY && stepMaxInternal > 0) currentMaxY = toMaxY
-                    if (currentMaxY < toMaxY && stepMaxInternal <= 0) currentMaxY = toMaxY
+            try {
+                currentMaxY += stepMaxInternal
+                if (currentMaxY > toMaxY && stepMaxInternal > 0) currentMaxY = toMaxY
+                if (currentMaxY < toMaxY && stepMaxInternal <= 0) currentMaxY = toMaxY
 
 //                    currentMinY += stepMinInternal
 //                    if (currentMinY > toMinY && stepMinInternal > 0) currentMinY = toMinY
 //                    if (currentMinY < toMinY && stepMinInternal <= 0) currentMinY = toMinY
 
-                    mainThreadHandler.post {
-                        callback?.invoke(currentMaxY, currentMinY)
-                    }
-                    Thread.sleep(delay)
-                    Log.d("TAGLOGThread", "Working")
-                } catch (e: InterruptedException) {
-                    e.printStackTrace()
-                }
+                callback?.invoke(currentMaxY, currentMinY)
+                schedule()
+            } catch (e: InterruptedException) {
+                e.printStackTrace()
             }
         }
     }
 
-    protected data class ColorPath(val path: Path, val color: Int)
+    protected data class ColorLines(val points: FloatArray, val color: Int)
     protected data class YChart(val yCoordinates: List<Float>, val title: String, val color: Int)
 }

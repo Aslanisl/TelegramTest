@@ -113,10 +113,5 @@ abstract class RecreateActivity: BaseActivity() {
         }
     }
 
-    override fun onBackPressed() {
-        startActivity(Intent(this, SelectChartActivity::class.java))
-        finish()
-    }
-
     open fun recreateActivity() {}
 }

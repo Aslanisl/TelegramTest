@@ -1,6 +1,6 @@
 package ru.aslanisl.telegramtest.model
 
-private const val ALPHA_STEP = 0.01f
+private const val ALPHA_STEP = 0.03f
 
 data class Chart(
     val title: String,
